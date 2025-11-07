@@ -1,0 +1,63 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rocket Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background: #0b2233;
+    }
+    canvas { display: block; }
+
+    /* === MOBILE CONTROLS === */
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+      user-select: none;
+      justify-content: center;
+    }
+    .btn {
+      background: #3333aa;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 55px;
+      height: 55px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: 0.15s;
+    }
+    .btn:hover { background: #5555cc; }
+    .btn:active { background: #111199; transform: scale(0.9); }
+
+    /* Hide mobile buttons on PC */
+    @media (min-width: 768px) { #controls { display: none; } }
+  </style>
+</head>
+<body>
+  <div id="controls" style="display:none;">
+    <button class="btn" id="leftBtn">⬅️</button>
+    <button class="btn" id="upBtn">⬆️</button>
+    <button class="btn" id="downBtn">⬇️</button>
+    <button class="btn" id="rightBtn">➡️</button>
+    <button class="btn" id="fireBtn">🔥</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
