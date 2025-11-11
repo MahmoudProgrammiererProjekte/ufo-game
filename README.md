@@ -19,7 +19,7 @@ Welcome to the Rocket Game! Your goal is simple: hit the "Wafu" target as many t
 ## How to Run
 
 1. Open the game via GitHub Hosting:
-   [[Your Game Link Here](https://mahmoudprogrammiererprojekte.github.io/ufo-game/)](#)
+   [[the game link is here](https://mahmoudprogrammiererprojekte.github.io/ufo-game/)](#)
 2. Press the spacebar or use the mouse to start playing.
 
 ## Requirements
