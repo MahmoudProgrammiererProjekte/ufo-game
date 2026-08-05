@@ -1,9 +1,8 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>Rocket Game</title>
   <style>
     html, body {
@@ -13,43 +12,51 @@
       width: 100%;
       height: 100%;
       background: #0b2233;
+      touch-action: none; /* منع التكبير والتمرير باللمس */
     }
     canvas { display: block; }
 
-    /* === MOBILE CONTROLS === */
+    /* أزرار اللمس للموبايل */
     #controls {
       position: absolute;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 10px;
+      gap: 12px;
       z-index: 10;
       user-select: none;
+      -webkit-user-select: none;
       justify-content: center;
     }
     .btn {
-      background: #3333aa;
+      background: rgba(51, 51, 170, 0.8);
       color: white;
-      border: none;
+      border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 50%;
-      width: 55px;
-      height: 55px;
-      font-size: 22px;
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
       font-weight: bold;
       cursor: pointer;
       touch-action: manipulation;
-      transition: 0.15s;
+      transition: background 0.15s, transform 0.15s;
     }
-    .btn:hover { background: #5555cc; }
-    .btn:active { background: #111199; transform: scale(0.9); }
+    .btn:active { 
+      background: #111199; 
+      transform: scale(0.9); 
+    }
 
-    /* Hide mobile buttons on PC */
-    @media (min-width: 768px) { #controls { display: none; } }
+    /* إخفاء الأزرار على أجهزة الكمبيوتر (الشاشات الكبيرة) */
+    @media (min-width: 768px) { 
+      #controls { display: none; } 
+    }
   </style>
 </head>
 <body>
-  <div id="controls" style="display:none;">
+
+  <!-- أزرار التحكم -->
+  <div id="controls">
     <button class="btn" id="leftBtn">⬅️</button>
     <button class="btn" id="upBtn">⬆️</button>
     <button class="btn" id="downBtn">⬇️</button>
@@ -59,5 +66,55 @@
 
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
   <script src="app.js"></script>
+
+  <!-- كود ربط اللمس بأسهم الكيبورد مباشرة دون تعديل app.js -->
+  <script>
+    (function() {
+      // خريطة الأزرار والأسهم المقابلة لها
+      const keyMap = {
+        'leftBtn': 'ArrowLeft',
+        'upBtn': 'ArrowUp',
+        'downBtn': 'ArrowDown',
+        'rightBtn': 'ArrowRight',
+        'fireBtn': ' ' // Space للإطلاق
+      };
+
+      // محاكاة حدث الضغط
+      function simulateKey(key, type) {
+        const event = new KeyboardEvent(type, {
+          key: key,
+          code: key === ' ' ? 'Space' : key,
+          bubbles: true
+        });
+        window.dispatchEvent(event);
+      }
+
+      // ربط كل زر بأحداث اللمس والماوس
+      Object.keys(keyMap).forEach(id => {
+        const btn = document.getElementById(id);
+        const key = keyMap[id];
+
+        if (!btn) return;
+
+        // عند بدء الضغط
+        const start = (e) => {
+          e.preventDefault();
+          simulateKey(key, 'keydown');
+        };
+
+        // عند ترك الضغط
+        const end = (e) => {
+          e.preventDefault();
+          simulateKey(key, 'keyup');
+        };
+
+        btn.addEventListener('pointerdown', start);
+        btn.addEventListener('pointerup', end);
+        btn.addEventListener('pointerleave', end);
+        btn.addEventListener('pointercancel', end);
+      });
+    })();
+  </script>
 </body>
 </html>
+
