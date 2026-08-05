@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Raketen-Spiel</title>
   <style>
     html, body {
@@ -18,22 +18,23 @@
     }
     canvas { display: block; }
 
-    /* === واجهة التحكم بأسلوب PUBG Mobile === */
+    /* === واجهة التحكم الذكية للموبايل (PUBG Mobile Style) === */
     #mobile-hud {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none; /* للسماح باللمس فقط للقطع التفاعلية */
-      z-index: 100;
+      pointer-events: none;
+      z-index: 999;
+      display: block;
     }
 
-    /* عصا التحكم اليسرى (Joystick Area) */
+    /* Joystick اليسار */
     #joystick-container {
       position: absolute;
-      bottom: 40px;
-      left: 40px;
+      bottom: 30px;
+      left: 20px;
       width: 120px;
       height: 120px;
       background: rgba(255, 255, 255, 0.15);
@@ -41,7 +42,8 @@
       border-radius: 50%;
       pointer-events: auto;
       touch-action: none;
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(3px);
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
     }
 
     #joystick-stick {
@@ -53,22 +55,22 @@
       background: rgba(255, 255, 255, 0.85);
       border-radius: 50%;
       transform: translate(-50%, -50%);
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
       pointer-events: none;
     }
 
-    /* زر إطلاق النار الأيمن (PUBG Fire Button) */
+    /* زر النار اليمين */
     #pubg-fire-btn {
       position: absolute;
-      bottom: 50px;
-      right: 40px;
+      bottom: 35px;
+      right: 25px;
       width: 85px;
       height: 85px;
-      background: radial-gradient(circle, rgba(235, 59, 90, 0.9) 0%, rgba(193, 15, 47, 0.9) 100%);
-      border: 3px solid rgba(255, 255, 255, 0.7);
+      background: radial-gradient(circle, rgba(235, 59, 90, 0.95) 0%, rgba(193, 15, 47, 0.95) 100%);
+      border: 3px solid rgba(255, 255, 255, 0.8);
       border-radius: 50%;
       color: white;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       font-family: Arial, sans-serif;
       display: flex;
@@ -76,7 +78,7 @@
       justify-content: center;
       pointer-events: auto;
       touch-action: manipulation;
-      box-shadow: 0 4px 15px rgba(229, 45, 39, 0.5);
+      box-shadow: 0 4px 15px rgba(229, 45, 39, 0.6);
       letter-spacing: 1px;
     }
 
@@ -85,75 +87,338 @@
       background: radial-gradient(circle, rgba(193, 15, 47, 1) 0%, rgba(130, 0, 20, 1) 100%);
     }
 
-    /* إخفاء الواجهة على الكمبيوتر */
-    @media (min-width: 768px) { 
+    /* إخفاء الواجهة في أجهزة الشاشات الكبيرة */
+    @media (min-width: 1025px) { 
       #mobile-hud { display: none; } 
     }
   </style>
 </head>
 <body>
 
-  <!-- طبقة التحكم (HUD) -->
+  <!-- واجهة عناصر التحكم للموبايل -->
   <div id="mobile-hud">
-    <!-- الـ Joystick للتحكم بالاتجاهات -->
     <div id="joystick-container">
       <div id="joystick-stick"></div>
     </div>
-
-    <!-- زر النار بأسلوب بوبجي -->
     <div id="pubg-fire-btn">FEUER</div>
   </div>
 
+  <!-- مكتبة PixiJS -->
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
-  
-  <!-- تعطيل إطلاق نار الأعداء UFO -->
+
+  <!-- كود اللعبة المدمج ومعدل بالكامل -->
   <script>
-    const originalSetInterval = window.setInterval;
-    window.setInterval = function(fn, delay, ...args) {
-      const fnStr = fn.toString();
-      if (fnStr.includes('enemy') || fnStr.includes('ufo') || fnStr.includes('shoot') || fnStr.includes('bullet')) {
-        if (!fnStr.includes('rocket') && !fnStr.includes('player')) {
-          return null;
-        }
-      }
-      return originalSetInterval(fn, delay, ...args);
+    // === PIXI App ===
+    const app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: 0x0b2233,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true
+    });
+    document.body.appendChild(app.view);
+
+    // === Resize ===
+    function resizeCanvas() {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    // === Assets ===
+    const ASSETS = {
+        rocket: "rocket.png",
+        bullet: "bullet.png",
+        ufo1: "ufo1.png",
+        ufo2: "ufo2.png",
+        explosionSound: "explosion.mp3",
+        hitSound: "hit.mp3",
+        shootSound: "shoot.mp3"
     };
-  </script>
 
-  <script src="app.js"></script>
+    // === Audio ===
+    const audio = {
+        explosion: new Audio(ASSETS.explosionSound),
+        hit: new Audio(ASSETS.hitSound),
+        shoot: new Audio(ASSETS.shootSound)
+    };
+    function playSound(s) { try { s.currentTime = 0; s.play().catch(()=>{}); } catch(e){} }
 
-  <!-- برمجة التحكم بالـ Joystick وزر النار محاكاةً للكيبورد -->
-  <script>
-    (function() {
-      // حالة المفاتيح المُحاكاة
-      const keyStates = {
-        ArrowLeft: false,
-        ArrowRight: false,
-        ArrowUp: false,
-        ArrowDown: false,
-        Space: false
-      };
+    // === Game Variables ===
+    let rocket = null;
+    let bullets = [], ufos = [], ufoBullets = [], explosions = [];
+    let keys = {}, gameRunning = false, ufoTimer = 0;
 
-      function setKey(key, state) {
-        if (keyStates[key] !== state) {
-          keyStates[key] = state;
-          const eventType = state ? 'keydown' : 'keyup';
-          const event = new KeyboardEvent(eventType, {
-            key: key === 'Space' ? ' ' : key,
-            code: key,
-            bubbles: true
-          });
-          window.dispatchEvent(event);
+    let score = 0;
+    let levelIndex = 0;
+    const LEVELS = [
+        { target: 30, durationSec: 60 },   // Level 1
+        { target: 60, durationSec: 90 },   // Level 2
+        { target: 90, durationSec: 120 }   // Level 3
+    ];
+    let levelStartTime = 0;
+
+    // UI texts (باللغة الألمانية)
+    const ui = {
+        scoreText: new PIXI.Text("", { fill: "white", fontSize: 20, fontWeight: "bold" }),
+        levelText: new PIXI.Text("", { fill: "yellow", fontSize: 20, fontWeight: "bold" }),
+        timerText: new PIXI.Text("", { fill: "lightgreen", fontSize: 20, fontWeight: "bold" }),
+        messageText: new PIXI.Text("", { fill: "red", fontSize: 32, fontWeight: "bold" })
+    };
+
+    ui.scoreText.x = 10; ui.scoreText.y = 10;
+    ui.levelText.x = 10; ui.levelText.y = 36;
+    ui.timerText.x = 10; ui.timerText.y = 62;
+    ui.messageText.anchor = { x: 0.5, y: 0.5 };
+    ui.messageText.x = app.screen.width / 2; ui.messageText.y = 80;
+    app.stage.addChild(ui.scoreText, ui.levelText, ui.timerText, ui.messageText);
+
+    // === Helpers ===
+    function random(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
+    function isMobile() { return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+
+    // === Buttons (canvas) helper ===
+    function createButton(text, x, y, w, h, onClick) {
+        const c = new PIXI.Container();
+        const g = new PIXI.Graphics();
+        g.beginFill(0x3333aa).drawRoundedRect(0, 0, w, h, 10).endFill();
+        g.interactive = true; g.buttonMode = true;
+        g.on("pointerdown", onClick);
+        g.on("pointerover", () => g.alpha = 0.8);
+        g.on("pointerout", () => g.alpha = 1);
+        c.addChild(g);
+        const t = new PIXI.Text(text, { fill: "white", fontSize: 18, fontWeight: "bold" });
+        t.x = w / 2 - t.width / 2; t.y = h / 2 - t.height / 2;
+        c.addChild(t);
+        c.x = x; c.y = y;
+        return c;
+    }
+
+    // === Rocket ===
+    function createRocket() {
+        if (rocket && app.stage.children.includes(rocket)) app.stage.removeChild(rocket);
+        rocket = PIXI.Sprite.from(ASSETS.rocket);
+        rocket.anchor.set(0.5);
+        rocket.x = app.screen.width / 2;
+        rocket.y = app.screen.height - 120;
+        rocket.scale.set(0.07);
+        app.stage.addChild(rocket);
+    }
+
+    // === Player Bullet ===
+    function shootBullet() {
+        if (!gameRunning || !rocket) return;
+        const b = PIXI.Sprite.from(ASSETS.bullet);
+        b.anchor.set(0.5);
+        b.x = rocket.x;
+        b.y = rocket.y - rocket.height / 2;
+        b.scale.set(0.05);
+        bullets.push(b);
+        app.stage.addChild(b);
+        playSound(audio.shoot);
+    }
+
+    // === UFO Bullet (منع إطلاق النار نهائياً) ===
+    function spawnUfoBullet(ufo) {
+        // تم تعطيل إطلاق طلقات الـ UFO بناءً على طلبك
+        return;
+    }
+
+    // === Explosion visual ===
+    function explodeAt(x, y) {
+        const g = new PIXI.Graphics();
+        g.beginFill(0xff4444).drawCircle(0, 0, 12).endFill();
+        g.x = x; g.y = y;
+        app.stage.addChild(g);
+        explosions.push({ sprite: g, life: 20 });
+        playSound(audio.explosion);
+    }
+
+    function hitFeedback(x, y) {
+        const g = new PIXI.Graphics();
+        g.beginFill(0xffff66).drawCircle(0, 0, 8).endFill();
+        g.x = x; g.y = y;
+        app.stage.addChild(g);
+        explosions.push({ sprite: g, life: 10 });
+        playSound(audio.hit);
+    }
+
+    // === UFO spawn ===
+    function spawnUFO() {
+        const u = PIXI.Sprite.from(Math.random() < 0.5 ? ASSETS.ufo1 : ASSETS.ufo2);
+        u.anchor.set(0.5);
+        u.x = random(50, app.screen.width - 50);
+        u.y = -40;
+        u.scale.set(0.09);
+        ufos.push(u);
+        app.stage.addChild(u);
+    }
+
+    // === Collision ===
+    function isColliding(a, b) {
+        if (!a || !b) return false;
+        const A = a.getBounds(), B = b.getBounds();
+        return A.x < B.x + B.width && A.x + A.width > B.x && A.y < B.y + B.height && A.y + A.height > B.y;
+    }
+
+    // === Game over/win UI (Deutsch) ===
+    function endLevel(won) {
+        gameRunning = false;
+        ui.messageText.text = won ? `Erfolg! Level ${levelIndex+1} geschafft!` : `Verloren! Ziel nicht erreicht.`;
+        ui.messageText.x = app.screen.width/2;
+
+        const restartBtn = createButton("Neustart (Level 1)", app.screen.width/2 - 210, app.screen.height/2 + 10, 200, 60, ()=> {
+            if (restartBtn.parent) app.stage.removeChild(restartBtn);
+            if (nextBtn.parent) app.stage.removeChild(nextBtn);
+            resetGame(0);
+        });
+
+        const nextBtn = createButton(won ? (levelIndex < LEVELS.length-1 ? "Nächstes Level" : "Ende") : "Wiederholen", app.screen.width/2 + 10, app.screen.height/2 + 10, 200, 60, ()=> {
+            if (restartBtn.parent) app.stage.removeChild(restartBtn);
+            if (nextBtn.parent) app.stage.removeChild(nextBtn);
+            if (won) {
+                if (levelIndex < LEVELS.length-1) {
+                    levelIndex++;
+                    resetGame(levelIndex);
+                } else {
+                    ui.messageText.text = "Alle Level bestanden! Glückwunsch! 🎉";
+                }
+            } else {
+                resetGame(levelIndex);
+            }
+        });
+
+        app.stage.addChild(restartBtn, nextBtn);
+    }
+
+    // === Reset Game ===
+    function resetGame(startLevel = 0) {
+        [bullets, ufos, ufoBullets, explosions].forEach(arr => arr.forEach(obj => {
+            const sprite = obj && obj.sprite ? obj.sprite : obj;
+            if (sprite && sprite.parent) app.stage.removeChild(sprite);
+        }));
+        bullets = []; ufos = []; ufoBullets = []; explosions = [];
+        keys = {};
+        ufoTimer = 0;
+        score = 0;
+        levelIndex = Math.max(0, Math.min(startLevel, LEVELS.length-1));
+        ui.messageText.text = "";
+        ui.scoreText.text = `Punkte: ${score}`;
+        ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
+        startGame();
+    }
+
+    // === Start ===
+    function startGame() {
+        gameRunning = true;
+        createRocket();
+        levelStartTime = performance.now();
+        ui.scoreText.text = `Punkte: ${score}`;
+        ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
+    }
+
+    // === Controls listener ===
+    document.addEventListener("keydown", e => keys[e.code] = true);
+    document.addEventListener("keyup", e => keys[e.code] = false);
+    document.addEventListener("keydown", e => { if (e.code === "Space") shootBullet(); });
+
+    // Start Button auf dem Bildschirm
+    const startButton = createButton("Spiel Starten", app.screen.width / 2 - 100, app.screen.height / 2 - 30, 200, 60, () => {
+        if (startButton.parent) app.stage.removeChild(startButton);
+        startGame();
+    });
+    app.stage.addChild(startButton);
+
+    // === Main Game Loop ===
+    app.ticker.add(() => {
+        if (!gameRunning) return;
+
+        // الحركة للصاروخ
+        if (!rocket) return;
+        if (keys["ArrowLeft"] && rocket.x > 20) rocket.x -= 6;
+        if (keys["ArrowRight"] && rocket.x < app.screen.width - 20) rocket.x += 6;
+        if (keys["ArrowUp"] && rocket.y > 30) rocket.y -= 6;
+        if (keys["ArrowDown"] && rocket.y < app.screen.height - 30) rocket.y += 6;
+
+        // رصاص اللاعب
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const b = bullets[i];
+            b.y -= 9;
+            if (b.y < -10) { if (b.parent) app.stage.removeChild(b); bullets.splice(i, 1); continue; }
         }
-      }
 
-      // === 1. برمجة الـ Joystick ===
+        // حركة الـ UFO والاصطدام
+        for (let i = ufos.length - 1; i >= 0; i--) {
+            const u = ufos[i];
+            u.y += 2;
+            if (u.y > app.screen.height + 40) { if (u.parent) app.stage.removeChild(u); ufos.splice(i, 1); continue; }
+
+            // إصابة UFO بالرصاص
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const b = bullets[j];
+                if (isColliding(b, u)) {
+                    hitFeedback(u.x, u.y);
+                    if (u.parent) app.stage.removeChild(u);
+                    if (b.parent) app.stage.removeChild(b);
+                    ufos.splice(i, 1);
+                    bullets.splice(j, 1);
+                    score++;
+                    ui.scoreText.text = `Punkte: ${score}`;
+                    break;
+                }
+            }
+
+            // الاصطدام المباشر مع الصاروخ
+            if (rocket && isColliding(u, rocket)) {
+                explodeAt(rocket.x, rocket.y);
+                if (rocket.parent) app.stage.removeChild(rocket);
+                gameRunning = false;
+                endLevel(false);
+                return;
+            }
+        }
+
+        // الانفجارات
+        for (let i = explosions.length - 1; i >= 0; i--) {
+            const e = explosions[i];
+            e.sprite.scale.x += 0.08;
+            e.sprite.scale.y += 0.08;
+            if (!e.sprite.alpha) e.sprite.alpha = 1;
+            e.sprite.alpha -= 0.03;
+            e.life--;
+            if (e.life <= 0) { if (e.sprite.parent) app.stage.removeChild(e.sprite); explosions.splice(i, 1); }
+        }
+
+        // إنشاء UFO جديد
+        ufoTimer++;
+        if (ufoTimer > 60) { spawnUFO(); ufoTimer = 0; }
+
+        // التوقيت
+        const elapsedMs = performance.now() - levelStartTime;
+        const elapsedSec = Math.floor(elapsedMs / 1000);
+        const level = LEVELS[levelIndex];
+        const remaining = level.durationSec - elapsedSec;
+        ui.timerText.text = `Zeit: ${remaining > 0 ? remaining : 0}s`;
+
+        // التحقق من الفوز والانتهاء
+        if (score >= level.target) {
+            endLevel(true);
+            return;
+        }
+        if (remaining <= 0) {
+            endLevel(score >= level.target);
+            return;
+        }
+    });
+
+    // === برمجة لمس الـ Joystick وزر النار (FEUER) للموبايل ===
+    (function setupTouchEngine() {
       const joyContainer = document.getElementById('joystick-container');
       const joyStick = document.getElementById('joystick-stick');
+      const fireBtn = document.getElementById('pubg-fire-btn');
       let isJoyActive = false;
       let joyTouchId = null;
-
-      const maxRadius = 40; // أقصى مسافة تحرك للزر من المركز
+      const maxRadius = 40;
 
       function handleJoyMove(clientX, clientY) {
         const rect = joyContainer.getBoundingClientRect();
@@ -172,22 +437,21 @@
 
         joyStick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
 
-        // تحويل الحركة لضغطات أسهم
-        const threshold = 12;
-        setKey('ArrowLeft', deltaX < -threshold);
-        setKey('ArrowRight', deltaX > threshold);
-        setKey('ArrowUp', deltaY < -threshold);
-        setKey('ArrowDown', deltaY > threshold);
+        const threshold = 10;
+        keys["ArrowLeft"] = deltaX < -threshold;
+        keys["ArrowRight"] = deltaX > threshold;
+        keys["ArrowUp"] = deltaY < -threshold;
+        keys["ArrowDown"] = deltaY > threshold;
       }
 
       function resetJoy() {
         isJoyActive = false;
         joyTouchId = null;
         joyStick.style.transform = 'translate(-50%, -50%)';
-        setKey('ArrowLeft', false);
-        setKey('ArrowRight', false);
-        setKey('ArrowUp', false);
-        setKey('ArrowDown', false);
+        keys["ArrowLeft"] = false;
+        keys["ArrowRight"] = false;
+        keys["ArrowUp"] = false;
+        keys["ArrowDown"] = false;
       }
 
       joyContainer.addEventListener('pointerdown', (e) => {
@@ -206,38 +470,23 @@
       joyContainer.addEventListener('pointerup', resetJoy);
       joyContainer.addEventListener('pointercancel', resetJoy);
 
-
-      // === 2. برمجة زر النار (FEUER) ===
-      const fireBtn = document.getElementById('pubg-fire-btn');
-
-      const startFire = (e) => {
+      // زر إطلاق النار
+      let fireInterval = null;
+      fireBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        setKey('Space', true);
-        if (navigator.vibrate) navigator.vibrate(20); // اهتزاز لمسي خفيف
-      };
+        shootBullet();
+        if (navigator.vibrate) navigator.vibrate(15);
+        fireInterval = setInterval(shootBullet, 200); // إطلاق مستمر
+      });
 
       const stopFire = (e) => {
         e.preventDefault();
-        setKey('Space', false);
+        if (fireInterval) clearInterval(fireInterval);
       };
 
-      fireBtn.addEventListener('pointerdown', startFire);
       fireBtn.addEventListener('pointerup', stopFire);
       fireBtn.addEventListener('pointerleave', stopFire);
       fireBtn.addEventListener('pointercancel', stopFire);
-
-      // === 3. حظر طلقات UFO المستمرة ===
-      window.addEventListener('load', () => {
-        if (window.app && window.app.ticker) {
-          window.app.ticker.add(() => {
-            if (window.enemyBullets && Array.isArray(window.enemyBullets)) {
-              window.enemyBullets.forEach(b => { if(b) b.visible = false; });
-              window.enemyBullets.length = 0;
-            }
-          });
-        }
-      });
-
     })();
   </script>
 </body>
