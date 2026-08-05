@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-  <title>Rocket Game</title>
+  <title>Raketen-Spiel</title>
   <style>
     html, body {
       margin: 0;
@@ -12,109 +12,121 @@
       width: 100%;
       height: 100%;
       background: #0b2233;
-      touch-action: none; /* منع التكبير والتمرير باللمس */
+      touch-action: none; /* منع الزوم والتمرير */
+      user-select: none;
+      -webkit-user-select: none;
     }
     canvas { display: block; }
 
-    /* أزرار اللمس للموبايل */
-    #controls {
+    /* لوحة المعلومات باللغة الألمانية في الأعلى */
+    #touch-info {
       position: absolute;
-      bottom: 20px;
+      top: 15px;
       left: 50%;
       transform: translateX(-50%);
-      display: flex;
-      gap: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      text-align: center;
+      pointer-events: none;
       z-index: 10;
-      user-select: none;
-      -webkit-user-select: none;
-      justify-content: center;
-    }
-    .btn {
-      background: rgba(51, 51, 170, 0.8);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      touch-action: manipulation;
-      transition: background 0.15s, transform 0.15s;
-    }
-    .btn:active { 
-      background: #111199; 
-      transform: scale(0.9); 
-    }
-
-    /* إخفاء الأزرار على أجهزة الكمبيوتر (الشاشات الكبيرة) */
-    @media (min-width: 768px) { 
-      #controls { display: none; } 
     }
   </style>
 </head>
 <body>
 
-  <!-- أزرار التحكم -->
-  <div id="controls">
-    <button class="btn" id="leftBtn">⬅️</button>
-    <button class="btn" id="upBtn">⬆️</button>
-    <button class="btn" id="downBtn">⬇️</button>
-    <button class="btn" id="rightBtn">➡️</button>
-    <button class="btn" id="fireBtn">🔥</button>
+  <!-- نص إرشادي بالألماني على الشاشة -->
+  <div id="touch-info">
+    🚀 Touch & Halten zum Steuern und Feuern
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
   <script src="app.js"></script>
 
-  <!-- كود ربط اللمس بأسهم الكيبورد مباشرة دون تعديل app.js -->
+  <!-- كود التحكم باللمس المباشر والألماني -->
   <script>
     (function() {
-      // خريطة الأزرار والأسهم المقابلة لها
-      const keyMap = {
-        'leftBtn': 'ArrowLeft',
-        'upBtn': 'ArrowUp',
-        'downBtn': 'ArrowDown',
-        'rightBtn': 'ArrowRight',
-        'fireBtn': ' ' // Space للإطلاق
+      // محاكاة إشارات الكيبورد لـ app.js
+      const activeKeys = {
+        ArrowLeft: false,
+        ArrowRight: false,
+        ArrowUp: false,
+        ArrowDown: false,
+        Space: false
       };
 
-      // محاكاة حدث الضغط
-      function simulateKey(key, type) {
-        const event = new KeyboardEvent(type, {
-          key: key,
-          code: key === ' ' ? 'Space' : key,
-          bubbles: true
-        });
-        window.dispatchEvent(event);
+      function updateKey(key, state) {
+        if (activeKeys[key] !== state) {
+          activeKeys[key] = state;
+          const eventType = state ? 'keydown' : 'keyup';
+          const event = new KeyboardEvent(eventType, {
+            key: key === 'Space' ? ' ' : key,
+            code: key,
+            bubbles: true
+          });
+          window.dispatchEvent(event);
+        }
       }
 
-      // ربط كل زر بأحداث اللمس والماوس
-      Object.keys(keyMap).forEach(id => {
-        const btn = document.getElementById(id);
-        const key = keyMap[id];
+      function clearAllKeys() {
+        Object.keys(activeKeys).forEach(key => updateKey(key, false));
+      }
 
-        if (!btn) return;
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let isTouching = false;
 
-        // عند بدء الضغط
-        const start = (e) => {
-          e.preventDefault();
-          simulateKey(key, 'keydown');
-        };
-
-        // عند ترك الضغط
-        const end = (e) => {
-          e.preventDefault();
-          simulateKey(key, 'keyup');
-        };
-
-        btn.addEventListener('pointerdown', start);
-        btn.addEventListener('pointerup', end);
-        btn.addEventListener('pointerleave', end);
-        btn.addEventListener('pointercancel', end);
+      // عند بدء اللمس
+      window.addEventListener('pointerdown', (e) => {
+        isTouching = true;
+        touchStartX = e.clientX;
+        touchStartY = e.clientY;
+        // إطلاق النار بمجرد اللمس
+        updateKey('Space', true);
       });
+
+      // عند سحب الأصبع على الشاشة
+      window.addEventListener('pointermove', (e) => {
+        if (!isTouching) return;
+
+        const deltaX = e.clientX - touchStartX;
+        const deltaY = e.clientY - touchStartY;
+        const threshold = 10; // حساسية اللمس
+
+        // الاتجاه الأفقي (يمين / يسار)
+        if (deltaX < -threshold) {
+          updateKey('ArrowLeft', true);
+          updateKey('ArrowRight', false);
+        } else if (deltaX > threshold) {
+          updateKey('ArrowRight', true);
+          updateKey('ArrowLeft', false);
+        } else {
+          updateKey('ArrowLeft', false);
+          updateKey('ArrowRight', false);
+        }
+
+        // الاتجاه العمودي (فوق / تحت)
+        if (deltaY < -threshold) {
+          updateKey('ArrowUp', true);
+          updateKey('ArrowDown', false);
+        } else if (deltaY > threshold) {
+          updateKey('ArrowDown', true);
+          updateKey('ArrowUp', false);
+        } else {
+          updateKey('ArrowUp', false);
+          updateKey('ArrowDown', false);
+        }
+      });
+
+      // عند رفع الأصبع
+      const stopTouch = () => {
+        isTouching = false;
+        clearAllKeys();
+      };
+
+      window.addEventListener('pointerup', stopTouch);
+      window.addEventListener('pointercancel', stopTouch);
     })();
   </script>
 </body>
 </html>
-
