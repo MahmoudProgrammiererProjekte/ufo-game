@@ -18,105 +18,226 @@
     }
     canvas { display: block; }
 
-    /* === أزرار التحكم الكبيرة والواضحة للموبايل === */
-    #controls {
+    /* === واجهة التحكم بأسلوب PUBG Mobile === */
+    #mobile-hud {
       position: absolute;
-      bottom: 25px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 15px;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* للسماح باللمس فقط للقطع التفاعلية */
       z-index: 100;
     }
-    .btn {
-      background: rgba(30, 144, 255, 0.85);
-      color: white;
-      border: 3px solid rgba(255, 255, 255, 0.6);
+
+    /* عصا التحكم اليسرى (Joystick Area) */
+    #joystick-container {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 3px solid rgba(255, 255, 255, 0.4);
       border-radius: 50%;
-      width: 65px;
-      height: 65px;
-      font-size: 26px;
+      pointer-events: auto;
+      touch-action: none;
+      backdrop-filter: blur(2px);
+    }
+
+    #joystick-stick {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+
+    /* زر إطلاق النار الأيمن (PUBG Fire Button) */
+    #pubg-fire-btn {
+      position: absolute;
+      bottom: 50px;
+      right: 40px;
+      width: 85px;
+      height: 85px;
+      background: radial-gradient(circle, rgba(235, 59, 90, 0.9) 0%, rgba(193, 15, 47, 0.9) 100%);
+      border: 3px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      color: white;
+      font-size: 20px;
       font-weight: bold;
-      cursor: pointer;
+      font-family: Arial, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      pointer-events: auto;
       touch-action: manipulation;
-    }
-    .btn:active { 
-      background: rgba(0, 80, 180, 0.95); 
-      transform: scale(0.9); 
+      box-shadow: 0 4px 15px rgba(229, 45, 39, 0.5);
+      letter-spacing: 1px;
     }
 
-    /* زر الإطلاق مميز بلون مختلف */
-    #fireBtn {
-      background: rgba(220, 20, 60, 0.85);
-    }
-    #fireBtn:active {
-      background: rgba(160, 0, 30, 0.95);
+    #pubg-fire-btn:active {
+      transform: scale(0.92);
+      background: radial-gradient(circle, rgba(193, 15, 47, 1) 0%, rgba(130, 0, 20, 1) 100%);
     }
 
-    /* إخفاء الأزرار على أجهزة الكمبيوتر */
+    /* إخفاء الواجهة على الكمبيوتر */
     @media (min-width: 768px) { 
-      #controls { display: none; } 
+      #mobile-hud { display: none; } 
     }
   </style>
 </head>
 <body>
 
-  <!-- الأزرار الواضحة والكبيرة -->
-  <div id="controls">
-    <button class="btn" id="leftBtn">◀</button>
-    <button class="btn" id="upBtn">▲</button>
-    <button class="btn" id="downBtn">▼</button>
-    <button class="btn" id="rightBtn">▶</button>
-    <button class="btn" id="fireBtn">🔥</button>
+  <!-- طبقة التحكم (HUD) -->
+  <div id="mobile-hud">
+    <!-- الـ Joystick للتحكم بالاتجاهات -->
+    <div id="joystick-container">
+      <div id="joystick-stick"></div>
+    </div>
+
+    <!-- زر النار بأسلوب بوبجي -->
+    <div id="pubg-fire-btn">FEUER</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
+  
+  <!-- تعطيل إطلاق نار الأعداء UFO -->
+  <script>
+    const originalSetInterval = window.setInterval;
+    window.setInterval = function(fn, delay, ...args) {
+      const fnStr = fn.toString();
+      if (fnStr.includes('enemy') || fnStr.includes('ufo') || fnStr.includes('shoot') || fnStr.includes('bullet')) {
+        if (!fnStr.includes('rocket') && !fnStr.includes('player')) {
+          return null;
+        }
+      }
+      return originalSetInterval(fn, delay, ...args);
+    };
+  </script>
+
   <script src="app.js"></script>
 
-  <!-- ربط الأزرار بمحاكاة الكيبورد عشان app.js ما يتأثر -->
+  <!-- برمجة التحكم بالـ Joystick وزر النار محاكاةً للكيبورد -->
   <script>
     (function() {
-      const keyMap = {
-        'leftBtn': 'ArrowLeft',
-        'upBtn': 'ArrowUp',
-        'downBtn': 'ArrowDown',
-        'rightBtn': 'ArrowRight',
-        'fireBtn': ' '
+      // حالة المفاتيح المُحاكاة
+      const keyStates = {
+        ArrowLeft: false,
+        ArrowRight: false,
+        ArrowUp: false,
+        ArrowDown: false,
+        Space: false
       };
 
-      function simulateKey(key, type) {
-        const event = new KeyboardEvent(type, {
-          key: key === ' ' ? ' ' : key,
-          code: key === ' ' ? 'Space' : key,
-          bubbles: true
-        });
-        window.dispatchEvent(event);
+      function setKey(key, state) {
+        if (keyStates[key] !== state) {
+          keyStates[key] = state;
+          const eventType = state ? 'keydown' : 'keyup';
+          const event = new KeyboardEvent(eventType, {
+            key: key === 'Space' ? ' ' : key,
+            code: key,
+            bubbles: true
+          });
+          window.dispatchEvent(event);
+        }
       }
 
-      Object.keys(keyMap).forEach(id => {
-        const btn = document.getElementById(id);
-        const key = keyMap[id];
-        if (!btn) return;
+      // === 1. برمجة الـ Joystick ===
+      const joyContainer = document.getElementById('joystick-container');
+      const joyStick = document.getElementById('joystick-stick');
+      let isJoyActive = false;
+      let joyTouchId = null;
 
-        const start = (e) => {
-          e.preventDefault();
-          simulateKey(key, 'keydown');
-        };
+      const maxRadius = 40; // أقصى مسافة تحرك للزر من المركز
 
-        const end = (e) => {
-          e.preventDefault();
-          simulateKey(key, 'keyup');
-        };
+      function handleJoyMove(clientX, clientY) {
+        const rect = joyContainer.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
 
-        btn.addEventListener('pointerdown', start);
-        btn.addEventListener('pointerup', end);
-        btn.addEventListener('pointerleave', end);
-        btn.addEventListener('pointercancel', end);
+        let deltaX = clientX - centerX;
+        let deltaY = clientY - centerY;
+
+        const distance = Math.hypot(deltaX, deltaY);
+
+        if (distance > maxRadius) {
+          deltaX = (deltaX / distance) * maxRadius;
+          deltaY = (deltaY / distance) * maxRadius;
+        }
+
+        joyStick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+
+        // تحويل الحركة لضغطات أسهم
+        const threshold = 12;
+        setKey('ArrowLeft', deltaX < -threshold);
+        setKey('ArrowRight', deltaX > threshold);
+        setKey('ArrowUp', deltaY < -threshold);
+        setKey('ArrowDown', deltaY > threshold);
+      }
+
+      function resetJoy() {
+        isJoyActive = false;
+        joyTouchId = null;
+        joyStick.style.transform = 'translate(-50%, -50%)';
+        setKey('ArrowLeft', false);
+        setKey('ArrowRight', false);
+        setKey('ArrowUp', false);
+        setKey('ArrowDown', false);
+      }
+
+      joyContainer.addEventListener('pointerdown', (e) => {
+        isJoyActive = true;
+        joyTouchId = e.pointerId;
+        joyContainer.setPointerCapture(e.pointerId);
+        handleJoyMove(e.clientX, e.clientY);
       });
+
+      joyContainer.addEventListener('pointermove', (e) => {
+        if (isJoyActive && e.pointerId === joyTouchId) {
+          handleJoyMove(e.clientX, e.clientY);
+        }
+      });
+
+      joyContainer.addEventListener('pointerup', resetJoy);
+      joyContainer.addEventListener('pointercancel', resetJoy);
+
+
+      // === 2. برمجة زر النار (FEUER) ===
+      const fireBtn = document.getElementById('pubg-fire-btn');
+
+      const startFire = (e) => {
+        e.preventDefault();
+        setKey('Space', true);
+        if (navigator.vibrate) navigator.vibrate(20); // اهتزاز لمسي خفيف
+      };
+
+      const stopFire = (e) => {
+        e.preventDefault();
+        setKey('Space', false);
+      };
+
+      fireBtn.addEventListener('pointerdown', startFire);
+      fireBtn.addEventListener('pointerup', stopFire);
+      fireBtn.addEventListener('pointerleave', stopFire);
+      fireBtn.addEventListener('pointercancel', stopFire);
+
+      // === 3. حظر طلقات UFO المستمرة ===
+      window.addEventListener('load', () => {
+        if (window.app && window.app.ticker) {
+          window.app.ticker.add(() => {
+            if (window.enemyBullets && Array.isArray(window.enemyBullets)) {
+              window.enemyBullets.forEach(b => { if(b) b.visible = false; });
+              window.enemyBullets.length = 0;
+            }
+          });
+        }
+      });
+
     })();
   </script>
 </body>
