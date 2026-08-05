@@ -2,13 +2,11 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <!-- إجبار متصفح الآيفون على الثبات ومنع التكبير/التصغير نهائياً -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Raketen-Spiel</title>
   <style>
-    /* إعدادات الشاشة الأساسية لمنع التمرير والسحب */
     html, body {
       margin: 0;
       padding: 0;
@@ -16,11 +14,11 @@
       height: 100vh;
       overflow: hidden;
       background: #0b2233;
-      touch-action: none; /* يمنع السحب العشوائي */
+      touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      -webkit-touch-callout: none; /* يمنع القوائم المنبثقة في الآيفون */
-      overscroll-behavior: none; /* يمنع تحديث الصفحة بالسحب (Pull-to-refresh) */
+      -webkit-touch-callout: none;
+      overscroll-behavior: none;
     }
     
     canvas { 
@@ -33,7 +31,6 @@
       height: 100vh;
     }
 
-    /* === واجهة التحكم الثابتة للموبايل === */
     #mobile-hud {
       position: fixed;
       top: 0;
@@ -46,11 +43,11 @@
 
     #joystick-container {
       position: absolute;
-      bottom: 40px;
-      left: 25px;
+      bottom: 30px;
+      left: 20px;
       width: 110px;
       height: 110px;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       border: 3px solid rgba(255, 255, 255, 0.4);
       border-radius: 50%;
       pointer-events: auto;
@@ -74,8 +71,8 @@
 
     #pubg-fire-btn {
       position: absolute;
-      bottom: 40px;
-      right: 25px;
+      bottom: 30px;
+      right: 20px;
       width: 90px;
       height: 90px;
       background: radial-gradient(circle, rgba(235, 59, 90, 0.95) 0%, rgba(193, 15, 47, 0.95) 100%);
@@ -115,23 +112,18 @@
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
 
   <script>
-    // === منع التكبير المزدوج والسحب العشوائي في الآيفون (iOS Fix) ===
-    document.addEventListener('touchstart', function(event) {
-        if (event.touches.length > 1) {
-            event.preventDefault(); // منع التكبير بإصبعين
-        }
+    // === حماية الآيفون ===
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
 
     let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(event) {
+    document.addEventListener('touchend', function(e) {
         const now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
-            event.preventDefault(); // منع التكبير بالنقر المزدوج (Double Tap Zoom)
-        }
+        if (now - lastTouchEnd <= 300) e.preventDefault();
         lastTouchEnd = now;
     }, { passive: false });
 
-    // === إعدادات PIXI ===
     const app = new PIXI.Application({
         width: window.innerWidth,
         height: window.innerHeight,
@@ -147,10 +139,7 @@
         app.renderer.resize(window.innerWidth, window.innerHeight);
         isMobileScreen = window.innerWidth <= 768;
     }
-    // تقليل استجابة تغيير الحجم لتجنب اهتزاز الشاشة في الآيفون عند ظهور/اختفاء شريط العنوان
-    window.addEventListener("resize", () => {
-        setTimeout(resizeCanvas, 100);
-    });
+    window.addEventListener("resize", resizeCanvas);
 
     function getScale(baseScale) {
         return isMobileScreen ? baseScale * 0.65 : baseScale;
@@ -222,7 +211,7 @@
         rocket = PIXI.Sprite.from(ASSETS.rocket);
         rocket.anchor.set(0.5);
         rocket.x = app.screen.width / 2;
-        rocket.y = app.screen.height - (isMobileScreen ? 180 : 120);
+        rocket.y = app.screen.height - (isMobileScreen ? 160 : 100);
         rocket.scale.set(getScale(0.06));
         app.stage.addChild(rocket);
     }
@@ -232,29 +221,32 @@
         const b = PIXI.Sprite.from(ASSETS.bullet);
         b.anchor.set(0.5);
         b.x = rocket.x;
-        b.y = rocket.y - rocket.height / 2;
+        b.y = rocket.y - 25;
         b.scale.set(getScale(0.04));
         bullets.push(b);
         app.stage.addChild(b);
         playSound(audio.shoot);
     }
 
-    function explodeAt(x, y) {
+    // === إطلاق نار من الأعداء (UFO) ===
+    function shootUFOBullet(ufoX, ufoY) {
+        if (!gameRunning) return;
         const g = new PIXI.Graphics();
-        g.beginFill(0xff4444).drawCircle(0, 0, isMobileScreen ? 15 : 20).endFill();
-        g.x = x; g.y = y;
+        g.beginFill(0xff3333).drawCircle(0, 0, isMobileScreen ? 5 : 7).endFill();
+        g.x = ufoX;
+        g.y = ufoY + 15;
         app.stage.addChild(g);
-        explosions.push({ sprite: g, life: 20 });
-        playSound(audio.explosion);
+        ufoBullets.push(g);
     }
 
-    function hitFeedback(x, y) {
+    function explodeAt(x, y) {
         const g = new PIXI.Graphics();
-        g.beginFill(0xffff66).drawCircle(0, 0, isMobileScreen ? 10 : 15).endFill();
+        g.beginFill(0xff3333).drawCircle(0, 0, isMobileScreen ? 20 : 30).endFill();
+        g.beginFill(0xffaa00).drawCircle(0, 0, isMobileScreen ? 12 : 18).endFill();
         g.x = x; g.y = y;
         app.stage.addChild(g);
-        explosions.push({ sprite: g, life: 10 });
-        playSound(audio.hit);
+        explosions.push({ sprite: g, life: 15 });
+        playSound(audio.explosion);
     }
 
     function spawnUFO() {
@@ -263,6 +255,7 @@
         u.x = random(40, app.screen.width - 40);
         u.y = -40;
         u.scale.set(getScale(0.08));
+        u.lastShootTime = 0; // توقيت خاص بكل سفينة لإطلاق النار
         ufos.push(u);
         app.stage.addChild(u);
     }
@@ -270,7 +263,7 @@
     function isColliding(a, b) {
         if (!a || !b) return false;
         const A = a.getBounds(), B = b.getBounds();
-        const margin = 10;
+        const margin = 8;
         return A.x + margin < B.x + B.width - margin && 
                A.x + A.width - margin > B.x + margin && 
                A.y + margin < B.y + B.height - margin && 
@@ -342,38 +335,77 @@
     app.ticker.add(() => {
         if (!gameRunning || !rocket) return;
 
-        if (keys["ArrowLeft"]) rocket.x -= 6;
-        if (keys["ArrowRight"]) rocket.x += 6;
-        if (keys["ArrowUp"]) rocket.y -= 6;
-        if (keys["ArrowDown"]) rocket.y += 6;
+        const speed = 7;
+        if (keys["ArrowLeft"]) rocket.x -= speed;
+        if (keys["ArrowRight"]) rocket.x += speed;
+        if (keys["ArrowUp"]) rocket.y -= speed;
+        if (keys["ArrowDown"]) rocket.y += speed;
 
-        const paddingX = rocket.width / 2;
-        const paddingY = rocket.height / 2;
-        const hudHeight = isMobileScreen ? 170 : 50;
-        
-        const minX = paddingX;
-        const maxX = app.screen.width - paddingX;
-        const minY = paddingY + 80;
-        const maxY = app.screen.height - hudHeight - paddingY;
+        const minX = 25;
+        const maxX = app.screen.width - 25;
+        const minY = 80;
+        const maxY = app.screen.height - (isMobileScreen ? 140 : 60);
 
         rocket.x = Math.max(minX, Math.min(rocket.x, maxX));
         rocket.y = Math.max(minY, Math.min(rocket.y, maxY));
 
+        // 1. حركات رصاص الصاروخ
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.y -= 12;
             if (b.y < -20) { if (b.parent) app.stage.removeChild(b); bullets.splice(i, 1); continue; }
         }
 
+        // 2. حركات رصاص الـ UFO وتصادمه مع الصاروخ
+        for (let i = ufoBullets.length - 1; i >= 0; i--) {
+            const ub = ufoBullets[i];
+            ub.y += isMobileScreen ? 5 : 6;
+
+            if (ub.y > app.screen.height + 20) {
+                if (ub.parent) app.stage.removeChild(ub);
+                ufoBullets.splice(i, 1);
+                continue;
+            }
+
+            // إصابة رصاص الأعداء للصاروخ
+            if (rocket && isColliding(ub, rocket)) {
+                explodeAt(rocket.x, rocket.y);
+                if (rocket.parent) app.stage.removeChild(rocket);
+                gameRunning = false;
+                endLevel(false);
+                return;
+            }
+        }
+
+        // 3. حركات الأعداء (UFO)
+        const now = performance.now();
         for (let i = ufos.length - 1; i >= 0; i--) {
             const u = ufos[i];
             u.y += isMobileScreen ? 2.5 : 3;
             if (u.y > app.screen.height + 40) { if (u.parent) app.stage.removeChild(u); ufos.splice(i, 1); continue; }
 
+            // جعل الأعداء يطلقون النار بشكل دوري
+            if (now - u.lastShootTime > random(1500, 3000)) {
+                shootUFOBullet(u.x, u.y);
+                u.lastShootTime = now;
+            }
+
+            // اصطدام رصاص الصاروخ بالـ UFO
             for (let j = bullets.length - 1; j >= 0; j--) {
                 const b = bullets[j];
                 if (isColliding(b, u)) {
-                    hitFeedback(u.x, u.y);
+                    explodeAt(u.x, u.y);
+                    
+                    // === حذف جميع الرصاصات القادمة من اتجاه هذا العدو فوراً كي لا تصل للصاروخ ===
+                    for (let k = ufoBullets.length - 1; k >= 0; k--) {
+                        const ub = ufoBullets[k];
+                        // حذف الرصاص المتواجد في نطاق محيط الـ UFO المُدمر
+                        if (Math.abs(ub.x - u.x) < 60) {
+                            if (ub.parent) app.stage.removeChild(ub);
+                            ufoBullets.splice(k, 1);
+                        }
+                    }
+
                     if (u.parent) app.stage.removeChild(u);
                     if (b.parent) app.stage.removeChild(b);
                     ufos.splice(i, 1);
@@ -384,6 +416,7 @@
                 }
             }
 
+            // اصطدام الصاروخ مباشر بالـ UFO
             if (rocket && isColliding(u, rocket)) {
                 explodeAt(rocket.x, rocket.y);
                 if (rocket.parent) app.stage.removeChild(rocket);
@@ -393,18 +426,21 @@
             }
         }
 
+        // تحديث الانفجارات
         for (let i = explosions.length - 1; i >= 0; i--) {
             const e = explosions[i];
             e.sprite.scale.x += 0.08;
             e.sprite.scale.y += 0.08;
-            if (!e.sprite.alpha) e.sprite.alpha = 1;
-            e.sprite.alpha -= 0.04;
+            e.sprite.alpha -= 0.06;
             e.life--;
-            if (e.life <= 0) { if (e.sprite.parent) app.stage.removeChild(e.sprite); explosions.splice(i, 1); }
+            if (e.life <= 0 || e.sprite.alpha <= 0) { 
+                if (e.sprite.parent) app.stage.removeChild(e.sprite); 
+                explosions.splice(i, 1); 
+            }
         }
 
         ufoTimer++;
-        if (ufoTimer > (isMobileScreen ? 50 : 60)) { spawnUFO(); ufoTimer = 0; }
+        if (ufoTimer > (isMobileScreen ? 45 : 60)) { spawnUFO(); ufoTimer = 0; }
 
         const elapsedMs = performance.now() - levelStartTime;
         const elapsedSec = Math.floor(elapsedMs / 1000);
@@ -416,7 +452,7 @@
         if (remaining <= 0) { endLevel(score >= level.target); return; }
     });
 
-    // === Joystick & Touch Handling ===
+    // === التحكم واللمس ===
     (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container');
       const joyStick = document.getElementById('joystick-stick');
@@ -464,7 +500,7 @@
       joyContainer.addEventListener('pointerdown', (e) => {
         isJoyActive = true;
         joyTouchId = e.pointerId;
-        try { joyContainer.setPointerCapture(e.pointerId); } catch(e){}
+        try { joyContainer.setPointerCapture(e.pointerId); } catch(err){}
         handleJoyMove(e.clientX, e.clientY);
       });
 
@@ -495,8 +531,7 @@
         e.preventDefault();
         e.stopPropagation();
 
-        stopFire(); 
-        
+        stopFire();
         activeFirePointerId = e.pointerId;
         try { fireBtn.setPointerCapture(e.pointerId); } catch(err){}
 
