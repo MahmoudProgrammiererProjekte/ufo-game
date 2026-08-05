@@ -112,7 +112,6 @@
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
 
   <script>
-    // === حماية الآيفون ===
     document.addEventListener('touchstart', function(e) {
         if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
@@ -147,7 +146,7 @@
 
     const ASSETS = {
         rocket: "rocket.png",
-        bullet: "bullet.png",
+        bullet: "bullet.png", // صورة الرصاصة الأصلية
         ufo1: "ufo1.png",
         ufo2: "ufo2.png",
         explosionSound: "explosion.mp3",
@@ -228,15 +227,17 @@
         playSound(audio.shoot);
     }
 
-    // === إطلاق نار من الأعداء (UFO) ===
+    // === إطلاق رصاص الأعداء باستخدام صورة الرصاصة الأصلية ومحذورة للأسفل ===
     function shootUFOBullet(ufoX, ufoY) {
         if (!gameRunning) return;
-        const g = new PIXI.Graphics();
-        g.beginFill(0xff3333).drawCircle(0, 0, isMobileScreen ? 5 : 7).endFill();
-        g.x = ufoX;
-        g.y = ufoY + 15;
-        app.stage.addChild(g);
-        ufoBullets.push(g);
+        const b = PIXI.Sprite.from(ASSETS.bullet);
+        b.anchor.set(0.5);
+        b.x = ufoX;
+        b.y = ufoY + 20;
+        b.rotation = Math.PI; // تدوير الرصاصة لتصرح لأسفل
+        b.scale.set(getScale(0.035));
+        app.stage.addChild(b);
+        ufoBullets.push(b);
     }
 
     function explodeAt(x, y) {
@@ -255,19 +256,20 @@
         u.x = random(40, app.screen.width - 40);
         u.y = -40;
         u.scale.set(getScale(0.08));
-        u.lastShootTime = 0; // توقيت خاص بكل سفينة لإطلاق النار
+        u.lastShootTime = performance.now();
+        u.canShoot = Math.random() < 0.25; // فقط 25% من الأعداء يطلقون النار لضمان الاعتدال
         ufos.push(u);
         app.stage.addChild(u);
     }
 
+    // === تحسين دقة التصادم لإصابة ممتازة وسهلة ===
     function isColliding(a, b) {
         if (!a || !b) return false;
         const A = a.getBounds(), B = b.getBounds();
-        const margin = 8;
-        return A.x + margin < B.x + B.width - margin && 
-               A.x + A.width - margin > B.x + margin && 
-               A.y + margin < B.y + B.height - margin && 
-               A.y + A.height - margin > B.y + margin;
+        return A.x < B.x + B.width && 
+               A.x + A.width > B.x && 
+               A.y < B.y + B.height && 
+               A.y + A.height > B.y;
     }
 
     function endLevel(won) {
@@ -349,17 +351,17 @@
         rocket.x = Math.max(minX, Math.min(rocket.x, maxX));
         rocket.y = Math.max(minY, Math.min(rocket.y, maxY));
 
-        // 1. حركات رصاص الصاروخ
+        // 1. حركة رصاص اللاعب
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.y -= 12;
             if (b.y < -20) { if (b.parent) app.stage.removeChild(b); bullets.splice(i, 1); continue; }
         }
 
-        // 2. حركات رصاص الـ UFO وتصادمه مع الصاروخ
+        // 2. حركة رصاص الـ UFO والتصادم
         for (let i = ufoBullets.length - 1; i >= 0; i--) {
             const ub = ufoBullets[i];
-            ub.y += isMobileScreen ? 5 : 6;
+            ub.y += isMobileScreen ? 4 : 5;
 
             if (ub.y > app.screen.height + 20) {
                 if (ub.parent) app.stage.removeChild(ub);
@@ -367,7 +369,6 @@
                 continue;
             }
 
-            // إصابة رصاص الأعداء للصاروخ
             if (rocket && isColliding(ub, rocket)) {
                 explodeAt(rocket.x, rocket.y);
                 if (rocket.parent) app.stage.removeChild(rocket);
@@ -377,30 +378,29 @@
             }
         }
 
-        // 3. حركات الأعداء (UFO)
+        // 3. حركات وإطلاق نار الـ UFO
         const now = performance.now();
         for (let i = ufos.length - 1; i >= 0; i--) {
             const u = ufos[i];
-            u.y += isMobileScreen ? 2.5 : 3;
+            u.y += isMobileScreen ? 2.2 : 2.8;
             if (u.y > app.screen.height + 40) { if (u.parent) app.stage.removeChild(u); ufos.splice(i, 1); continue; }
 
-            // جعل الأعداء يطلقون النار بشكل دوري
-            if (now - u.lastShootTime > random(1500, 3000)) {
+            // إطلاق نار باعتدال وتأخير زمني بين 3.5 إلى 5 ثواني
+            if (u.canShoot && (now - u.lastShootTime > random(3500, 5000))) {
                 shootUFOBullet(u.x, u.y);
                 u.lastShootTime = now;
             }
 
-            // اصطدام رصاص الصاروخ بالـ UFO
+            // اصطدام رصاص اللاعب بالعدو
             for (let j = bullets.length - 1; j >= 0; j--) {
                 const b = bullets[j];
                 if (isColliding(b, u)) {
                     explodeAt(u.x, u.y);
                     
-                    // === حذف جميع الرصاصات القادمة من اتجاه هذا العدو فوراً كي لا تصل للصاروخ ===
+                    // اختفاء وتطهير جميع رصاصات هذا العدو فور إصابته
                     for (let k = ufoBullets.length - 1; k >= 0; k--) {
                         const ub = ufoBullets[k];
-                        // حذف الرصاص المتواجد في نطاق محيط الـ UFO المُدمر
-                        if (Math.abs(ub.x - u.x) < 60) {
+                        if (Math.abs(ub.x - u.x) < 80) {
                             if (ub.parent) app.stage.removeChild(ub);
                             ufoBullets.splice(k, 1);
                         }
@@ -416,7 +416,6 @@
                 }
             }
 
-            // اصطدام الصاروخ مباشر بالـ UFO
             if (rocket && isColliding(u, rocket)) {
                 explodeAt(rocket.x, rocket.y);
                 if (rocket.parent) app.stage.removeChild(rocket);
@@ -426,7 +425,7 @@
             }
         }
 
-        // تحديث الانفجارات
+        // الانفجارات
         for (let i = explosions.length - 1; i >= 0; i--) {
             const e = explosions[i];
             e.sprite.scale.x += 0.08;
@@ -440,7 +439,7 @@
         }
 
         ufoTimer++;
-        if (ufoTimer > (isMobileScreen ? 45 : 60)) { spawnUFO(); ufoTimer = 0; }
+        if (ufoTimer > (isMobileScreen ? 50 : 65)) { spawnUFO(); ufoTimer = 0; }
 
         const elapsedMs = performance.now() - levelStartTime;
         const elapsedSec = Math.floor(elapsedMs / 1000);
@@ -452,7 +451,7 @@
         if (remaining <= 0) { endLevel(score >= level.target); return; }
     });
 
-    // === التحكم واللمس ===
+    // === إعدادات التاتش ===
     (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container');
       const joyStick = document.getElementById('joystick-stick');
