@@ -18,40 +18,38 @@
     }
     canvas { display: block; }
 
-    /* === واجهة التحكم الذكية للموبايل (PUBG Mobile Style) === */
+    /* === واجهة التحكم (PUBG Style HUD) === */
     #mobile-hud {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       pointer-events: none;
-      z-index: 999;
-      display: block;
+      z-index: 9999;
     }
 
-    /* Joystick اليسار */
+    /* Joystick ثابت اليسار */
     #joystick-container {
       position: absolute;
       bottom: 30px;
       left: 20px;
-      width: 120px;
-      height: 120px;
+      width: 100px;
+      height: 100px;
       background: rgba(255, 255, 255, 0.15);
       border: 3px solid rgba(255, 255, 255, 0.4);
       border-radius: 50%;
       pointer-events: auto;
       touch-action: none;
-      backdrop-filter: blur(3px);
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
     }
 
     #joystick-stick {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       background: rgba(255, 255, 255, 0.85);
       border-radius: 50%;
       transform: translate(-50%, -50%);
@@ -59,35 +57,33 @@
       pointer-events: none;
     }
 
-    /* زر النار اليمين */
+    /* زر النار ثابت اليمين */
     #pubg-fire-btn {
       position: absolute;
-      bottom: 35px;
-      right: 25px;
-      width: 85px;
-      height: 85px;
+      bottom: 30px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
       background: radial-gradient(circle, rgba(235, 59, 90, 0.95) 0%, rgba(193, 15, 47, 0.95) 100%);
       border: 3px solid rgba(255, 255, 255, 0.8);
       border-radius: 50%;
       color: white;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       font-family: Arial, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
       pointer-events: auto;
-      touch-action: manipulation;
+      touch-action: none;
       box-shadow: 0 4px 15px rgba(229, 45, 39, 0.6);
-      letter-spacing: 1px;
     }
 
     #pubg-fire-btn:active {
-      transform: scale(0.92);
+      transform: scale(0.9);
       background: radial-gradient(circle, rgba(193, 15, 47, 1) 0%, rgba(130, 0, 20, 1) 100%);
     }
 
-    /* إخفاء الواجهة في أجهزة الشاشات الكبيرة */
     @media (min-width: 1025px) { 
       #mobile-hud { display: none; } 
     }
@@ -95,7 +91,6 @@
 </head>
 <body>
 
-  <!-- واجهة عناصر التحكم للموبايل -->
   <div id="mobile-hud">
     <div id="joystick-container">
       <div id="joystick-stick"></div>
@@ -103,12 +98,9 @@
     <div id="pubg-fire-btn">FEUER</div>
   </div>
 
-  <!-- مكتبة PixiJS -->
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
 
-  <!-- كود اللعبة المدمج ومعدل بالكامل -->
   <script>
-    // === PIXI App ===
     const app = new PIXI.Application({
         width: window.innerWidth,
         height: window.innerHeight,
@@ -118,14 +110,12 @@
     });
     document.body.appendChild(app.view);
 
-    // === Resize ===
     function resizeCanvas() {
         app.renderer.resize(window.innerWidth, window.innerHeight);
     }
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    // === Assets ===
     const ASSETS = {
         rocket: "rocket.png",
         bullet: "bullet.png",
@@ -136,7 +126,6 @@
         shootSound: "shoot.mp3"
     };
 
-    // === Audio ===
     const audio = {
         explosion: new Audio(ASSETS.explosionSound),
         hit: new Audio(ASSETS.hitSound),
@@ -144,7 +133,6 @@
     };
     function playSound(s) { try { s.currentTime = 0; s.play().catch(()=>{}); } catch(e){} }
 
-    // === Game Variables ===
     let rocket = null;
     let bullets = [], ufos = [], ufoBullets = [], explosions = [];
     let keys = {}, gameRunning = false, ufoTimer = 0;
@@ -152,79 +140,64 @@
     let score = 0;
     let levelIndex = 0;
     const LEVELS = [
-        { target: 30, durationSec: 60 },   // Level 1
-        { target: 60, durationSec: 90 },   // Level 2
-        { target: 90, durationSec: 120 }   // Level 3
+        { target: 30, durationSec: 60 },
+        { target: 60, durationSec: 90 },
+        { target: 90, durationSec: 120 }
     ];
     let levelStartTime = 0;
 
-    // UI texts (باللغة الألمانية)
     const ui = {
-        scoreText: new PIXI.Text("", { fill: "white", fontSize: 20, fontWeight: "bold" }),
-        levelText: new PIXI.Text("", { fill: "yellow", fontSize: 20, fontWeight: "bold" }),
-        timerText: new PIXI.Text("", { fill: "lightgreen", fontSize: 20, fontWeight: "bold" }),
-        messageText: new PIXI.Text("", { fill: "red", fontSize: 32, fontWeight: "bold" })
+        scoreText: new PIXI.Text("", { fill: "white", fontSize: 18, fontWeight: "bold" }),
+        levelText: new PIXI.Text("", { fill: "yellow", fontSize: 18, fontWeight: "bold" }),
+        timerText: new PIXI.Text("", { fill: "lightgreen", fontSize: 18, fontWeight: "bold" }),
+        messageText: new PIXI.Text("", { fill: "red", fontSize: 28, fontWeight: "bold" })
     };
 
     ui.scoreText.x = 10; ui.scoreText.y = 10;
-    ui.levelText.x = 10; ui.levelText.y = 36;
-    ui.timerText.x = 10; ui.timerText.y = 62;
+    ui.levelText.x = 10; ui.levelText.y = 32;
+    ui.timerText.x = 10; ui.timerText.y = 54;
     ui.messageText.anchor = { x: 0.5, y: 0.5 };
-    ui.messageText.x = app.screen.width / 2; ui.messageText.y = 80;
+    ui.messageText.x = app.screen.width / 2; ui.messageText.y = 100;
     app.stage.addChild(ui.scoreText, ui.levelText, ui.timerText, ui.messageText);
 
-    // === Helpers ===
     function random(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
-    function isMobile() { return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
 
-    // === Buttons (canvas) helper ===
     function createButton(text, x, y, w, h, onClick) {
         const c = new PIXI.Container();
         const g = new PIXI.Graphics();
         g.beginFill(0x3333aa).drawRoundedRect(0, 0, w, h, 10).endFill();
         g.interactive = true; g.buttonMode = true;
         g.on("pointerdown", onClick);
-        g.on("pointerover", () => g.alpha = 0.8);
-        g.on("pointerout", () => g.alpha = 1);
         c.addChild(g);
-        const t = new PIXI.Text(text, { fill: "white", fontSize: 18, fontWeight: "bold" });
+        const t = new PIXI.Text(text, { fill: "white", fontSize: 16, fontWeight: "bold" });
         t.x = w / 2 - t.width / 2; t.y = h / 2 - t.height / 2;
         c.addChild(t);
         c.x = x; c.y = y;
         return c;
     }
 
-    // === Rocket ===
     function createRocket() {
         if (rocket && app.stage.children.includes(rocket)) app.stage.removeChild(rocket);
         rocket = PIXI.Sprite.from(ASSETS.rocket);
         rocket.anchor.set(0.5);
         rocket.x = app.screen.width / 2;
-        rocket.y = app.screen.height - 120;
-        rocket.scale.set(0.07);
+        rocket.y = app.screen.height - 160;
+        rocket.scale.set(0.06);
         app.stage.addChild(rocket);
     }
 
-    // === Player Bullet ===
     function shootBullet() {
         if (!gameRunning || !rocket) return;
         const b = PIXI.Sprite.from(ASSETS.bullet);
         b.anchor.set(0.5);
         b.x = rocket.x;
         b.y = rocket.y - rocket.height / 2;
-        b.scale.set(0.05);
+        b.scale.set(0.04);
         bullets.push(b);
         app.stage.addChild(b);
         playSound(audio.shoot);
     }
 
-    // === UFO Bullet (منع إطلاق النار نهائياً) ===
-    function spawnUfoBullet(ufo) {
-        // تم تعطيل إطلاق طلقات الـ UFO بناءً على طلبك
-        return;
-    }
-
-    // === Explosion visual ===
     function explodeAt(x, y) {
         const g = new PIXI.Graphics();
         g.beginFill(0xff4444).drawCircle(0, 0, 12).endFill();
@@ -243,37 +216,33 @@
         playSound(audio.hit);
     }
 
-    // === UFO spawn ===
     function spawnUFO() {
         const u = PIXI.Sprite.from(Math.random() < 0.5 ? ASSETS.ufo1 : ASSETS.ufo2);
         u.anchor.set(0.5);
-        u.x = random(50, app.screen.width - 50);
+        u.x = random(40, app.screen.width - 40);
         u.y = -40;
-        u.scale.set(0.09);
+        u.scale.set(0.08);
         ufos.push(u);
         app.stage.addChild(u);
     }
 
-    // === Collision ===
     function isColliding(a, b) {
         if (!a || !b) return false;
         const A = a.getBounds(), B = b.getBounds();
         return A.x < B.x + B.width && A.x + A.width > B.x && A.y < B.y + B.height && A.y + A.height > B.y;
     }
 
-    // === Game over/win UI (Deutsch) ===
     function endLevel(won) {
         gameRunning = false;
-        ui.messageText.text = won ? `Erfolg! Level ${levelIndex+1} geschafft!` : `Verloren! Ziel nicht erreicht.`;
-        ui.messageText.x = app.screen.width/2;
+        ui.messageText.text = won ? `Erfolg! Level ${levelIndex+1}!` : `Verloren!`;
 
-        const restartBtn = createButton("Neustart (Level 1)", app.screen.width/2 - 210, app.screen.height/2 + 10, 200, 60, ()=> {
+        const restartBtn = createButton("Neustart", app.screen.width/2 - 110, app.screen.height/2 + 10, 100, 50, ()=> {
             if (restartBtn.parent) app.stage.removeChild(restartBtn);
             if (nextBtn.parent) app.stage.removeChild(nextBtn);
             resetGame(0);
         });
 
-        const nextBtn = createButton(won ? (levelIndex < LEVELS.length-1 ? "Nächstes Level" : "Ende") : "Wiederholen", app.screen.width/2 + 10, app.screen.height/2 + 10, 200, 60, ()=> {
+        const nextBtn = createButton(won ? "Weiter" : "Wiederholen", app.screen.width/2 + 10, app.screen.height/2 + 10, 100, 50, ()=> {
             if (restartBtn.parent) app.stage.removeChild(restartBtn);
             if (nextBtn.parent) app.stage.removeChild(nextBtn);
             if (won) {
@@ -281,7 +250,7 @@
                     levelIndex++;
                     resetGame(levelIndex);
                 } else {
-                    ui.messageText.text = "Alle Level bestanden! Glückwunsch! 🎉";
+                    ui.messageText.text = "Gewonnen! 🎉";
                 }
             } else {
                 resetGame(levelIndex);
@@ -291,7 +260,6 @@
         app.stage.addChild(restartBtn, nextBtn);
     }
 
-    // === Reset Game ===
     function resetGame(startLevel = 0) {
         [bullets, ufos, ufoBullets, explosions].forEach(arr => arr.forEach(obj => {
             const sprite = obj && obj.sprite ? obj.sprite : obj;
@@ -308,7 +276,6 @@
         startGame();
     }
 
-    // === Start ===
     function startGame() {
         gameRunning = true;
         createRocket();
@@ -317,43 +284,40 @@
         ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
     }
 
-    // === Controls listener ===
     document.addEventListener("keydown", e => keys[e.code] = true);
     document.addEventListener("keyup", e => keys[e.code] = false);
-    document.addEventListener("keydown", e => { if (e.code === "Space") shootBullet(); });
 
-    // Start Button auf dem Bildschirm
-    const startButton = createButton("Spiel Starten", app.screen.width / 2 - 100, app.screen.height / 2 - 30, 200, 60, () => {
+    const startButton = createButton("Spiel Starten", app.screen.width / 2 - 80, app.screen.height / 2 - 25, 160, 50, () => {
         if (startButton.parent) app.stage.removeChild(startButton);
         startGame();
     });
     app.stage.addChild(startButton);
 
-    // === Main Game Loop ===
+    // === Game Loop ===
     app.ticker.add(() => {
-        if (!gameRunning) return;
+        if (!gameRunning || !rocket) return;
 
-        // الحركة للصاروخ
-        if (!rocket) return;
-        if (keys["ArrowLeft"] && rocket.x > 20) rocket.x -= 6;
-        if (keys["ArrowRight"] && rocket.x < app.screen.width - 20) rocket.x += 6;
-        if (keys["ArrowUp"] && rocket.y > 30) rocket.y -= 6;
-        if (keys["ArrowDown"] && rocket.y < app.screen.height - 30) rocket.y += 6;
+        const minX = 25;
+        const maxX = app.screen.width - 25;
+        const minY = 30;
+        const maxY = app.screen.height - 140;
 
-        // رصاص اللاعب
+        if (keys["ArrowLeft"] && rocket.x > minX) rocket.x -= 5;
+        if (keys["ArrowRight"] && rocket.x < maxX) rocket.x += 5;
+        if (keys["ArrowUp"] && rocket.y > minY) rocket.y -= 5;
+        if (keys["ArrowDown"] && rocket.y < maxY) rocket.y += 5;
+
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.y -= 9;
             if (b.y < -10) { if (b.parent) app.stage.removeChild(b); bullets.splice(i, 1); continue; }
         }
 
-        // حركة الـ UFO والاصطدام
         for (let i = ufos.length - 1; i >= 0; i--) {
             const u = ufos[i];
             u.y += 2;
             if (u.y > app.screen.height + 40) { if (u.parent) app.stage.removeChild(u); ufos.splice(i, 1); continue; }
 
-            // إصابة UFO بالرصاص
             for (let j = bullets.length - 1; j >= 0; j--) {
                 const b = bullets[j];
                 if (isColliding(b, u)) {
@@ -368,7 +332,6 @@
                 }
             }
 
-            // الاصطدام المباشر مع الصاروخ
             if (rocket && isColliding(u, rocket)) {
                 explodeAt(rocket.x, rocket.y);
                 if (rocket.parent) app.stage.removeChild(rocket);
@@ -378,7 +341,6 @@
             }
         }
 
-        // الانفجارات
         for (let i = explosions.length - 1; i >= 0; i--) {
             const e = explosions[i];
             e.sprite.scale.x += 0.08;
@@ -389,36 +351,27 @@
             if (e.life <= 0) { if (e.sprite.parent) app.stage.removeChild(e.sprite); explosions.splice(i, 1); }
         }
 
-        // إنشاء UFO جديد
         ufoTimer++;
         if (ufoTimer > 60) { spawnUFO(); ufoTimer = 0; }
 
-        // التوقيت
         const elapsedMs = performance.now() - levelStartTime;
         const elapsedSec = Math.floor(elapsedMs / 1000);
         const level = LEVELS[levelIndex];
         const remaining = level.durationSec - elapsedSec;
         ui.timerText.text = `Zeit: ${remaining > 0 ? remaining : 0}s`;
 
-        // التحقق من الفوز والانتهاء
-        if (score >= level.target) {
-            endLevel(true);
-            return;
-        }
-        if (remaining <= 0) {
-            endLevel(score >= level.target);
-            return;
-        }
+        if (score >= level.target) { endLevel(true); return; }
+        if (remaining <= 0) { endLevel(score >= level.target); return; }
     });
 
-    // === برمجة لمس الـ Joystick وزر النار (FEUER) للموبايل ===
-    (function setupTouchEngine() {
+    // === Joystick & Touch Handling (المُعدّلة والمضمونة) ===
+    (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container');
       const joyStick = document.getElementById('joystick-stick');
       const fireBtn = document.getElementById('pubg-fire-btn');
       let isJoyActive = false;
       let joyTouchId = null;
-      const maxRadius = 40;
+      const maxRadius = 35;
 
       function handleJoyMove(clientX, clientY) {
         const rect = joyContainer.getBoundingClientRect();
@@ -437,7 +390,7 @@
 
         joyStick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
 
-        const threshold = 10;
+        const threshold = 8;
         keys["ArrowLeft"] = deltaX < -threshold;
         keys["ArrowRight"] = deltaX > threshold;
         keys["ArrowUp"] = deltaY < -threshold;
@@ -470,23 +423,44 @@
       joyContainer.addEventListener('pointerup', resetJoy);
       joyContainer.addEventListener('pointercancel', resetJoy);
 
-      // زر إطلاق النار
+      // إصلاح زر إطلاق النار النهائي
       let fireInterval = null;
+      let activeFirePointerId = null;
+
+      function stopFire(e) {
+        if (fireInterval !== null) {
+          clearInterval(fireInterval);
+          fireInterval = null;
+        }
+        if (activeFirePointerId !== null && fireBtn.hasPointerCapture(activeFirePointerId)) {
+          try { fireBtn.releasePointerCapture(activeFirePointerId); } catch(err){}
+        }
+        activeFirePointerId = null;
+      }
+
       fireBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        e.stopPropagation();
+
+        // إيقاف أي إطلاق سابق في حال توجده
+        stopFire(e);
+
+        activeFirePointerId = e.pointerId;
+        try { fireBtn.setPointerCapture(e.pointerId); } catch(err){}
+
         shootBullet();
         if (navigator.vibrate) navigator.vibrate(15);
-        fireInterval = setInterval(shootBullet, 200); // إطلاق مستمر
+        fireInterval = setInterval(shootBullet, 180);
       });
 
-      const stopFire = (e) => {
-        e.preventDefault();
-        if (fireInterval) clearInterval(fireInterval);
-      };
-
       fireBtn.addEventListener('pointerup', stopFire);
-      fireBtn.addEventListener('pointerleave', stopFire);
       fireBtn.addEventListener('pointercancel', stopFire);
+      fireBtn.addEventListener('pointerleave', stopFire);
+      
+      // حماية إضافية لو تم رفع اللمس عالمياً
+      window.addEventListener('touchend', () => {
+        if (fireInterval !== null) stopFire();
+      });
     })();
   </script>
 </body>
