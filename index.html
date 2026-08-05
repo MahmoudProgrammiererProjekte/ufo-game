@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Raketen-Spiel</title>
   <style>
+    /* إعدادات الشاشة الأساسية لمنع التمرير */
     html, body {
       margin: 0;
       padding: 0;
@@ -12,58 +13,68 @@
       width: 100%;
       height: 100%;
       background: #0b2233;
-      touch-action: none;
+      touch-action: none; /* يمنع السحب العشوائي للموبايل */
       user-select: none;
       -webkit-user-select: none;
     }
-    canvas { display: block; }
+    
+    /* وضع الكانفاس خلف الواجهة */
+    canvas { 
+      display: block; 
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
 
-    /* === واجهة التحكم (PUBG Style HUD) === */
+    /* === واجهة التحكم الثابتة للموبايل === */
     #mobile-hud {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      pointer-events: none;
-      z-index: 9999;
+      pointer-events: none; /* يسمح بمرور اللمس للعبة إلا في مناطق الأزرار */
+      z-index: 9999; /* ضمان بقاء الأزرار فوق اللعبة دائماً */
     }
 
-    /* Joystick ثابت اليسار */
+    /* Joystick دائرة القاعدة */
     #joystick-container {
       position: absolute;
-      bottom: 30px;
-      left: 20px;
-      width: 100px;
-      height: 100px;
-      background: rgba(255, 255, 255, 0.15);
+      bottom: 40px;
+      left: 25px;
+      width: 110px;
+      height: 110px;
+      background: rgba(255, 255, 255, 0.1);
       border: 3px solid rgba(255, 255, 255, 0.4);
       border-radius: 50%;
       pointer-events: auto;
       touch-action: none;
       backdrop-filter: blur(4px);
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
     }
 
+    /* Joystick العصا المتحركة */
     #joystick-stick {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 40px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.85);
+      width: 45px;
+      height: 45px;
+      background: rgba(255, 255, 255, 0.9);
       border-radius: 50%;
       transform: translate(-50%, -50%);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-      pointer-events: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      pointer-events: none; /* لضمان عدم سرقة اللمس من القاعدة */
     }
 
-    /* زر النار ثابت اليمين */
+    /* زر النار */
     #pubg-fire-btn {
       position: absolute;
-      bottom: 30px;
-      right: 20px;
-      width: 80px;
-      height: 80px;
+      bottom: 40px;
+      right: 25px;
+      width: 90px;
+      height: 90px;
       background: radial-gradient(circle, rgba(235, 59, 90, 0.95) 0%, rgba(193, 15, 47, 0.95) 100%);
       border: 3px solid rgba(255, 255, 255, 0.8);
       border-radius: 50%;
@@ -76,7 +87,7 @@
       justify-content: center;
       pointer-events: auto;
       touch-action: none;
-      box-shadow: 0 4px 15px rgba(229, 45, 39, 0.6);
+      box-shadow: 0 4px 20px rgba(229, 45, 39, 0.7);
     }
 
     #pubg-fire-btn:active {
@@ -84,6 +95,7 @@
       background: radial-gradient(circle, rgba(193, 15, 47, 1) 0%, rgba(130, 0, 20, 1) 100%);
     }
 
+    /* إخفاء الواجهة للشاشات الكبيرة (كمبيوتر) */
     @media (min-width: 1025px) { 
       #mobile-hud { display: none; } 
     }
@@ -91,6 +103,7 @@
 </head>
 <body>
 
+  <!-- واجهة عناصر التحكم للموبايل -->
   <div id="mobile-hud">
     <div id="joystick-container">
       <div id="joystick-stick"></div>
@@ -110,11 +123,19 @@
     });
     document.body.appendChild(app.view);
 
+    // التحقق من حجم الشاشة لضبط أحجام العناصر تلقائياً
+    let isMobileScreen = window.innerWidth <= 768;
+    
     function resizeCanvas() {
         app.renderer.resize(window.innerWidth, window.innerHeight);
+        isMobileScreen = window.innerWidth <= 768;
     }
-    resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
+
+    // نسب التصغير: تعطي أحجام مثالية للهاتف والكمبيوتر
+    function getScale(baseScale) {
+        return isMobileScreen ? baseScale * 0.65 : baseScale;
+    }
 
     const ASSETS = {
         rocket: "rocket.png",
@@ -150,14 +171,14 @@
         scoreText: new PIXI.Text("", { fill: "white", fontSize: 18, fontWeight: "bold" }),
         levelText: new PIXI.Text("", { fill: "yellow", fontSize: 18, fontWeight: "bold" }),
         timerText: new PIXI.Text("", { fill: "lightgreen", fontSize: 18, fontWeight: "bold" }),
-        messageText: new PIXI.Text("", { fill: "red", fontSize: 28, fontWeight: "bold" })
+        messageText: new PIXI.Text("", { fill: "red", fontSize: 26, fontWeight: "bold" })
     };
 
     ui.scoreText.x = 10; ui.scoreText.y = 10;
-    ui.levelText.x = 10; ui.levelText.y = 32;
-    ui.timerText.x = 10; ui.timerText.y = 54;
+    ui.levelText.x = 10; ui.levelText.y = 35;
+    ui.timerText.x = 10; ui.timerText.y = 60;
     ui.messageText.anchor = { x: 0.5, y: 0.5 };
-    ui.messageText.x = app.screen.width / 2; ui.messageText.y = 100;
+    ui.messageText.x = app.screen.width / 2; ui.messageText.y = 120;
     app.stage.addChild(ui.scoreText, ui.levelText, ui.timerText, ui.messageText);
 
     function random(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
@@ -165,14 +186,15 @@
     function createButton(text, x, y, w, h, onClick) {
         const c = new PIXI.Container();
         const g = new PIXI.Graphics();
-        g.beginFill(0x3333aa).drawRoundedRect(0, 0, w, h, 10).endFill();
+        g.beginFill(0x3333aa).drawRoundedRect(0, 0, w, h, 12).endFill();
         g.interactive = true; g.buttonMode = true;
         g.on("pointerdown", onClick);
         c.addChild(g);
-        const t = new PIXI.Text(text, { fill: "white", fontSize: 16, fontWeight: "bold" });
+        const t = new PIXI.Text(text, { fill: "white", fontSize: 18, fontWeight: "bold" });
         t.x = w / 2 - t.width / 2; t.y = h / 2 - t.height / 2;
         c.addChild(t);
-        c.x = x; c.y = y;
+        c.x = x - w / 2; // تمركز الزر
+        c.y = y - h / 2;
         return c;
     }
 
@@ -181,8 +203,8 @@
         rocket = PIXI.Sprite.from(ASSETS.rocket);
         rocket.anchor.set(0.5);
         rocket.x = app.screen.width / 2;
-        rocket.y = app.screen.height - 160;
-        rocket.scale.set(0.06);
+        rocket.y = app.screen.height - (isMobileScreen ? 180 : 120); // وضع الصاروخ فوق الأزرار أوتوماتيكياً
+        rocket.scale.set(getScale(0.06));
         app.stage.addChild(rocket);
     }
 
@@ -192,7 +214,7 @@
         b.anchor.set(0.5);
         b.x = rocket.x;
         b.y = rocket.y - rocket.height / 2;
-        b.scale.set(0.04);
+        b.scale.set(getScale(0.04));
         bullets.push(b);
         app.stage.addChild(b);
         playSound(audio.shoot);
@@ -200,7 +222,7 @@
 
     function explodeAt(x, y) {
         const g = new PIXI.Graphics();
-        g.beginFill(0xff4444).drawCircle(0, 0, 12).endFill();
+        g.beginFill(0xff4444).drawCircle(0, 0, isMobileScreen ? 15 : 20).endFill();
         g.x = x; g.y = y;
         app.stage.addChild(g);
         explosions.push({ sprite: g, life: 20 });
@@ -209,7 +231,7 @@
 
     function hitFeedback(x, y) {
         const g = new PIXI.Graphics();
-        g.beginFill(0xffff66).drawCircle(0, 0, 8).endFill();
+        g.beginFill(0xffff66).drawCircle(0, 0, isMobileScreen ? 10 : 15).endFill();
         g.x = x; g.y = y;
         app.stage.addChild(g);
         explosions.push({ sprite: g, life: 10 });
@@ -221,7 +243,7 @@
         u.anchor.set(0.5);
         u.x = random(40, app.screen.width - 40);
         u.y = -40;
-        u.scale.set(0.08);
+        u.scale.set(getScale(0.08)); // حجم مناسب للأعداء
         ufos.push(u);
         app.stage.addChild(u);
     }
@@ -229,20 +251,25 @@
     function isColliding(a, b) {
         if (!a || !b) return false;
         const A = a.getBounds(), B = b.getBounds();
-        return A.x < B.x + B.width && A.x + A.width > B.x && A.y < B.y + B.height && A.y + A.height > B.y;
+        // تقليص صندوق التصادم قليلاً ليكون اللعب أكثر مرونة وعدلاً
+        const margin = 10;
+        return A.x + margin < B.x + B.width - margin && 
+               A.x + A.width - margin > B.x + margin && 
+               A.y + margin < B.y + B.height - margin && 
+               A.y + A.height - margin > B.y + margin;
     }
 
     function endLevel(won) {
         gameRunning = false;
         ui.messageText.text = won ? `Erfolg! Level ${levelIndex+1}!` : `Verloren!`;
 
-        const restartBtn = createButton("Neustart", app.screen.width/2 - 110, app.screen.height/2 + 10, 100, 50, ()=> {
+        const restartBtn = createButton("Neustart", app.screen.width / 2 - 80, app.screen.height / 2 + 30, 140, 50, ()=> {
             if (restartBtn.parent) app.stage.removeChild(restartBtn);
             if (nextBtn.parent) app.stage.removeChild(nextBtn);
             resetGame(0);
         });
 
-        const nextBtn = createButton(won ? "Weiter" : "Wiederholen", app.screen.width/2 + 10, app.screen.height/2 + 10, 100, 50, ()=> {
+        const nextBtn = createButton(won ? "Weiter" : "Wiederholen", app.screen.width / 2 + 80, app.screen.height / 2 + 30, 140, 50, ()=> {
             if (restartBtn.parent) app.stage.removeChild(restartBtn);
             if (nextBtn.parent) app.stage.removeChild(nextBtn);
             if (won) {
@@ -287,7 +314,7 @@
     document.addEventListener("keydown", e => keys[e.code] = true);
     document.addEventListener("keyup", e => keys[e.code] = false);
 
-    const startButton = createButton("Spiel Starten", app.screen.width / 2 - 80, app.screen.height / 2 - 25, 160, 50, () => {
+    const startButton = createButton("Spiel Starten", app.screen.width / 2, app.screen.height / 2, 200, 60, () => {
         if (startButton.parent) app.stage.removeChild(startButton);
         startGame();
     });
@@ -297,25 +324,37 @@
     app.ticker.add(() => {
         if (!gameRunning || !rocket) return;
 
-        const minX = 25;
-        const maxX = app.screen.width - 25;
-        const minY = 30;
-        const maxY = app.screen.height - 140;
+        // تطبيق حركة الصاروخ
+        if (keys["ArrowLeft"]) rocket.x -= 6;
+        if (keys["ArrowRight"]) rocket.x += 6;
+        if (keys["ArrowUp"]) rocket.y -= 6;
+        if (keys["ArrowDown"]) rocket.y += 6;
 
-        if (keys["ArrowLeft"] && rocket.x > minX) rocket.x -= 5;
-        if (keys["ArrowRight"] && rocket.x < maxX) rocket.x += 5;
-        if (keys["ArrowUp"] && rocket.y > minY) rocket.y -= 5;
-        if (keys["ArrowDown"] && rocket.y < maxY) rocket.y += 5;
+        // === حدود الشاشة الصارمة (منع الصاروخ من الاختفاء تحت الأزرار) ===
+        const paddingX = rocket.width / 2;
+        const paddingY = rocket.height / 2;
+        const hudHeight = isMobileScreen ? 170 : 50; // مساحة الأزرار السفلية المحمية
+        
+        const minX = paddingX;
+        const maxX = app.screen.width - paddingX;
+        const minY = paddingY + 80; // حماية النصوص العلوية
+        const maxY = app.screen.height - hudHeight - paddingY; // منع النزول خلف الأزرار
 
+        // إجبار الصاروخ على البقاء داخل هذه الحدود
+        rocket.x = Math.max(minX, Math.min(rocket.x, maxX));
+        rocket.y = Math.max(minY, Math.min(rocket.y, maxY));
+
+        // الرصاص
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
-            b.y -= 9;
-            if (b.y < -10) { if (b.parent) app.stage.removeChild(b); bullets.splice(i, 1); continue; }
+            b.y -= 12; // تسريع الرصاصة قليلاً لتناسب التصغير
+            if (b.y < -20) { if (b.parent) app.stage.removeChild(b); bullets.splice(i, 1); continue; }
         }
 
+        // الأعداء
         for (let i = ufos.length - 1; i >= 0; i--) {
             const u = ufos[i];
-            u.y += 2;
+            u.y += isMobileScreen ? 2.5 : 3;
             if (u.y > app.screen.height + 40) { if (u.parent) app.stage.removeChild(u); ufos.splice(i, 1); continue; }
 
             for (let j = bullets.length - 1; j >= 0; j--) {
@@ -346,13 +385,13 @@
             e.sprite.scale.x += 0.08;
             e.sprite.scale.y += 0.08;
             if (!e.sprite.alpha) e.sprite.alpha = 1;
-            e.sprite.alpha -= 0.03;
+            e.sprite.alpha -= 0.04;
             e.life--;
             if (e.life <= 0) { if (e.sprite.parent) app.stage.removeChild(e.sprite); explosions.splice(i, 1); }
         }
 
         ufoTimer++;
-        if (ufoTimer > 60) { spawnUFO(); ufoTimer = 0; }
+        if (ufoTimer > (isMobileScreen ? 50 : 60)) { spawnUFO(); ufoTimer = 0; }
 
         const elapsedMs = performance.now() - levelStartTime;
         const elapsedSec = Math.floor(elapsedMs / 1000);
@@ -364,14 +403,17 @@
         if (remaining <= 0) { endLevel(score >= level.target); return; }
     });
 
-    // === Joystick & Touch Handling (المُعدّلة والمضمونة) ===
+    // === Joystick & Touch Handling ===
     (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container');
       const joyStick = document.getElementById('joystick-stick');
       const fireBtn = document.getElementById('pubg-fire-btn');
+      
       let isJoyActive = false;
       let joyTouchId = null;
-      const maxRadius = 35;
+      
+      // حساب أقصى مسافة يمكن للعصا الخروج إليها (منعها من تجاوز القاعدة)
+      const maxRadius = (joyContainer.clientWidth / 2) - (joyStick.clientWidth / 2) - 5; 
 
       function handleJoyMove(clientX, clientY) {
         const rect = joyContainer.getBoundingClientRect();
@@ -383,6 +425,7 @@
 
         const distance = Math.hypot(deltaX, deltaY);
 
+        // إجبار العصا على البقاء داخل الدائرة بدقة رياضية
         if (distance > maxRadius) {
           deltaX = (deltaX / distance) * maxRadius;
           deltaY = (deltaY / distance) * maxRadius;
@@ -390,7 +433,7 @@
 
         joyStick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
 
-        const threshold = 8;
+        const threshold = 10; // مدى حساسية الحركة
         keys["ArrowLeft"] = deltaX < -threshold;
         keys["ArrowRight"] = deltaX > threshold;
         keys["ArrowUp"] = deltaY < -threshold;
@@ -423,11 +466,11 @@
       joyContainer.addEventListener('pointerup', resetJoy);
       joyContainer.addEventListener('pointercancel', resetJoy);
 
-      // إصلاح زر إطلاق النار النهائي
+      // === زر النار ===
       let fireInterval = null;
       let activeFirePointerId = null;
 
-      function stopFire(e) {
+      function stopFire() {
         if (fireInterval !== null) {
           clearInterval(fireInterval);
           fireInterval = null;
@@ -442,22 +485,21 @@
         e.preventDefault();
         e.stopPropagation();
 
-        // إيقاف أي إطلاق سابق في حال توجده
-        stopFire(e);
-
+        stopFire(); // إيقاف أي إطلاق مُعلق
+        
         activeFirePointerId = e.pointerId;
         try { fireBtn.setPointerCapture(e.pointerId); } catch(err){}
 
         shootBullet();
-        if (navigator.vibrate) navigator.vibrate(15);
-        fireInterval = setInterval(shootBullet, 180);
+        if (navigator.vibrate) navigator.vibrate(20);
+        fireInterval = setInterval(shootBullet, 200);
       });
 
       fireBtn.addEventListener('pointerup', stopFire);
       fireBtn.addEventListener('pointercancel', stopFire);
       fireBtn.addEventListener('pointerleave', stopFire);
       
-      // حماية إضافية لو تم رفع اللمس عالمياً
+      // لتأمين توقف الإطلاق في جميع الحالات
       window.addEventListener('touchend', () => {
         if (fireInterval !== null) stopFire();
       });
