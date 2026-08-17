@@ -29,7 +29,7 @@
 
     const app = new PIXI.Application({
         width: window.innerWidth, height: window.innerHeight, backgroundColor: 0x0b2233,
-        resolution: Math.min(window.devicePixelRatio || 1, 1.5), autoDensity: true, powerPreference: 'high-performance', antialias: false
+        resolution: 1, autoDensity: true, powerPreference: 'high-performance', antialias: false
     });
     document.body.appendChild(app.view);
 
@@ -38,14 +38,13 @@
     const getScale = base => isMobileScreen ? base * 0.75 : base;
 
     const ASSETS = { rocket: "rocket.png", bullet: "bullet.png", ufo1: "ufo1.png", ufo2: "ufo2.png", explosionSound: "explosion.mp3", hitSound: "hit.mp3", shootSound: "shoot.mp3" };
-    const audio = { explosion: new Audio(ASSETS.explosionSound), hit: new Audio(ASSETS.hitSound), shoot: new Audio(ASSETS.shootSound) };
     
-    // تشغيل الصوت الخفيف دون تجميد الشاشة
+    // إخضاع عناصر الصوت لإعادة الاستخدام السريع وتفادي الضغط على الذاكرة
+    const audio = { explosion: new Audio(ASSETS.explosionSound), hit: new Audio(ASSETS.hitSound), shoot: new Audio(ASSETS.shootSound) };
     function playSound(s) { 
         try { 
-            const snd = s.cloneNode(); 
-            snd.volume = 0.6;
-            snd.play().catch(()=>{}); 
+            s.currentTime = 0; 
+            s.play().catch(()=>{}); 
         } catch(e){} 
     }
 
@@ -101,12 +100,11 @@
         app.stage.addChild(b); ufoBullets.push(b);
     }
 
-    // رسم الانفجار بشكل سريع وخفيف جداً لعدم تبطئة الشاشة
     function explodeAt(x, y) {
         const g = new PIXI.Graphics();
-        g.beginFill(0xffaa00).drawCircle(0, 0, isMobileScreen ? 20 : 28).endFill();
+        g.beginFill(0xffaa00).drawCircle(0, 0, isMobileScreen ? 18 : 25).endFill();
         g.x = x; g.y = y; app.stage.addChild(g);
-        explosions.push({ sprite: g, life: 8 });
+        explosions.push({ sprite: g, life: 6 });
         playSound(audio.explosion);
     }
 
@@ -168,7 +166,6 @@
         ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
     }
 
-    // التحكم بزر الإنتر وبدء اللعب وإطلاق المسطرة
     document.addEventListener("keydown", e => {
         if (["Space", "Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
         keys[e.code] = true;
@@ -189,7 +186,6 @@
     app.stage.addChild(startButton);
     currentEnterAction = () => { if (startButton.parent) app.stage.removeChild(startButton); startGame(); };
 
-    // الحلقة الرئيسية السريعة
     app.ticker.add(() => {
         if (!gameRunning || !rocket) return;
         const now = performance.now();
@@ -253,7 +249,7 @@
 
         for (let i = explosions.length - 1; i >= 0; i--) {
             const e = explosions[i];
-            e.sprite.scale.x += 0.1; e.sprite.scale.y += 0.1; e.sprite.alpha -= 0.1; e.life--;
+            e.sprite.scale.x += 0.12; e.sprite.scale.y += 0.12; e.sprite.alpha -= 0.15; e.life--;
             if (e.life <= 0 || e.sprite.alpha <= 0) { destroySprite(e.sprite); explosions.splice(i, 1); }
         }
 
@@ -267,7 +263,6 @@
         if (score >= level.target || remaining <= 0) { endLevel(score >= level.target); }
     });
 
-    // عناصر التحكم باللمس المخصصة للموبايل
     (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container'), joyStick = document.getElementById('joystick-stick'), fireBtn = document.getElementById('pubg-fire-btn');
       let isJoyActive = false, joyTouchId = null, fireInterval = null;
