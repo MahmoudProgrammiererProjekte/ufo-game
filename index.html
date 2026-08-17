@@ -37,16 +37,12 @@
     window.addEventListener("resize", () => { app.renderer.resize(window.innerWidth, window.innerHeight); isMobileScreen = window.innerWidth <= 768; });
     const getScale = base => isMobileScreen ? base * 0.75 : base;
 
-    const ASSETS = { rocket: "rocket.png", bullet: "bullet.png", ufo1: "ufo1.png", ufo2: "ufo2.png", explosionSound: "explosion.mp3", hitSound: "hit.mp3", shootSound: "shoot.mp3" };
-    
-    // إخضاع عناصر الصوت لإعادة الاستخدام السريع وتفادي الضغط على الذاكرة
-    const audio = { explosion: new Audio(ASSETS.explosionSound), hit: new Audio(ASSETS.hitSound), shoot: new Audio(ASSETS.shootSound) };
-    function playSound(s) { 
-        try { 
-            s.currentTime = 0; 
-            s.play().catch(()=>{}); 
-        } catch(e){} 
-    }
+    const ASSETS = { rocket: "rocket.png", bullet: "bullet.png", ufo1: "ufo1.png", ufo2: "ufo2.png" };
+
+    // تجهيز صورة الانفجار مرة واحدة فقط لتخفيف العبء على الهاتف
+    const expGraph = new PIXI.Graphics();
+    expGraph.beginFill(0xffaa00).drawCircle(0, 0, 22).endFill();
+    const explosionTexture = app.renderer.generateTexture(expGraph);
 
     let rocket = null, bullets = [], ufos = [], ufoBullets = [], explosions = [];
     let keys = {}, gameRunning = false, ufoTimer = 0, score = 0, levelIndex = 0, levelStartTime = 0, lastSpaceShoot = 0, currentEnterAction = null;
@@ -90,7 +86,6 @@
         const b = PIXI.Sprite.from(ASSETS.bullet);
         b.anchor.set(0.5); b.x = rocket.x; b.y = rocket.y - 35; b.scale.set(getScale(0.06));
         bullets.push(b); app.stage.addChild(b);
-        playSound(audio.shoot);
     }
 
     function shootUFOBullet(ufoX, ufoY) {
@@ -100,12 +95,13 @@
         app.stage.addChild(b); ufoBullets.push(b);
     }
 
+    // عرض الانفجار المجهز مسبقاً بطريقة سريعة جداً
     function explodeAt(x, y) {
-        const g = new PIXI.Graphics();
-        g.beginFill(0xffaa00).drawCircle(0, 0, isMobileScreen ? 18 : 25).endFill();
-        g.x = x; g.y = y; app.stage.addChild(g);
-        explosions.push({ sprite: g, life: 6 });
-        playSound(audio.explosion);
+        const s = new PIXI.Sprite(explosionTexture);
+        s.anchor.set(0.5); s.x = x; s.y = y;
+        if (isMobileScreen) s.scale.set(0.8);
+        app.stage.addChild(s);
+        explosions.push({ sprite: s, life: 6 });
     }
 
     function spawnUFO() {
