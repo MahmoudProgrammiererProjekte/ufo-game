@@ -123,14 +123,13 @@
         lastTouchEnd = now;
     }, { passive: false });
 
-    // === تحسين إعدادات التطبيق لتقليل استهلاك البطارية والحرارة ===
     const app = new PIXI.Application({
         width: window.innerWidth,
         height: window.innerHeight,
         backgroundColor: 0x0b2233,
-        resolution: Math.min(window.devicePixelRatio || 1, 1.5), // حد أقصى للـ Pixel Ratio لضمان السلاسة
+        resolution: Math.min(window.devicePixelRatio || 1, 1.5),
         autoDensity: true,
-        powerPreference: 'low-power', // وضع توفير الطاقة للمعالج
+        powerPreference: 'low-power',
         antialias: false
     });
     document.body.appendChild(app.view);
@@ -266,18 +265,16 @@
         u.scale.set(getScale(0.12));
         u.lastShootTime = performance.now();
         
-        // === الضبط الدقيق لإطلاق رصاص الـ UFO ===
         if (levelIndex === 0) {
-            u.shootInterval = random(1000, 1600); // إطلاق رصاص أكثر بقليل في ليفل 1
+            u.shootInterval = random(1000, 1600);
         } else {
-            u.shootInterval = random(2200, 3600); // إطلاق رصاص أقل في ليفل 2 و 3
+            u.shootInterval = random(2200, 3600);
         }
         
         ufos.push(u);
         app.stage.addChild(u);
     }
 
-    // === دالة تصادم فائقة السرعة تمنع استهلاك المعالج وتضمن عدم التعليق ===
     function isCollidingFast(a, b, radius) {
         if (!a || !b) return false;
         const dx = a.x - b.x;
@@ -338,8 +335,31 @@
         ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
     }
 
-    document.addEventListener("keydown", e => keys[e.code] = true);
-    document.addEventListener("keyup", e => keys[e.code] = false);
+    // === التحكم بضغط زر المسطرة مع منع التكرار العشوائي للوظائف ===
+    let keyboardFireInterval = null;
+
+    document.addEventListener("keydown", e => {
+        keys[e.code] = true;
+
+        if (e.code === "Space") {
+            e.preventDefault(); // منع نزول الصفحة لأسفل عند الضغط على المسطرة
+            if (!keyboardFireInterval && gameRunning) {
+                shootBullet(); // إطلاق أول رصاصة فوراً
+                keyboardFireInterval = setInterval(shootBullet, 200); // إطلاق مستمر عند الاستمرار بالضغط
+            }
+        }
+    });
+
+    document.addEventListener("keyup", e => {
+        keys[e.code] = false;
+
+        if (e.code === "Space") {
+            if (keyboardFireInterval) {
+                clearInterval(keyboardFireInterval);
+                keyboardFireInterval = null;
+            }
+        }
+    });
 
     const startButton = createButton("Spiel Starten", app.screen.width / 2, app.screen.height / 2, 200, 60, () => {
         if (startButton.parent) app.stage.removeChild(startButton);
@@ -347,11 +367,10 @@
     });
     app.stage.addChild(startButton);
 
-    // === Game Loop الفعالة والمحسنة ===
+    // === Game Loop ===
     app.ticker.add(() => {
         if (!gameRunning || !rocket) return;
 
-        // الحفاظ الكامل على سرعة حركة الصاروخ الأصلية
         const speed = 3.5; 
 
         if (keys["ArrowLeft"]) rocket.x -= speed;
