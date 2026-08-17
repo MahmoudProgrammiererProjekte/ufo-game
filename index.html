@@ -166,6 +166,7 @@
     let rocket = null;
     let bullets = [], ufos = [], ufoBullets = [], explosions = [];
     let keys = {}, gameRunning = false, ufoTimer = 0;
+    let lastSpaceShootTime = 0;
 
     let score = 0;
     let levelIndex = 0;
@@ -335,30 +336,15 @@
         ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
     }
 
-    // === التحكم بضغط زر المسطرة مع منع التكرار العشوائي للوظائف ===
-    let keyboardFireInterval = null;
-
+    // === التقاط مدخلات الكيبورد وحظر نزول الصفحة عند ضغط المسطرة ===
     document.addEventListener("keydown", e => {
         keys[e.code] = true;
-
-        if (e.code === "Space") {
-            e.preventDefault(); // منع نزول الصفحة لأسفل عند الضغط على المسطرة
-            if (!keyboardFireInterval && gameRunning) {
-                shootBullet(); // إطلاق أول رصاصة فوراً
-                keyboardFireInterval = setInterval(shootBullet, 200); // إطلاق مستمر عند الاستمرار بالضغط
-            }
-        }
+        if (e.code === "Space") e.preventDefault();
     });
 
     document.addEventListener("keyup", e => {
         keys[e.code] = false;
-
-        if (e.code === "Space") {
-            if (keyboardFireInterval) {
-                clearInterval(keyboardFireInterval);
-                keyboardFireInterval = null;
-            }
-        }
+        if (e.code === "Space") e.preventDefault();
     });
 
     const startButton = createButton("Spiel Starten", app.screen.width / 2, app.screen.height / 2, 200, 60, () => {
@@ -377,6 +363,15 @@
         if (keys["ArrowRight"]) rocket.x += speed;
         if (keys["ArrowUp"]) rocket.y -= speed;
         if (keys["ArrowDown"]) rocket.y += speed;
+
+        // إطلاق الرصاص عند الضغط على زر المسطرة (Space) مع الحفاظ على معدل إطلاق متزن
+        if (keys["Space"]) {
+            const now = performance.now();
+            if (now - lastSpaceShootTime > 180) {
+                shootBullet();
+                lastSpaceShootTime = now;
+            }
+        }
 
         const minX = 30;
         const maxX = app.screen.width - 30;
@@ -493,7 +488,7 @@
         if (remaining <= 0) { endLevel(score >= level.target); return; }
     });
 
-    // === إعدادات التاتش والـ Joystick ===
+    // === إعدادات التاتش والـ Joystick للموبايل ===
     (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container');
       const joyStick = document.getElementById('joystick-stick');
