@@ -5,7 +5,7 @@ Welcome to the Rocket Game! Your goal is simple: hit the "Wafu" target as many t
 ## How to Play
 
 * Press the **spacebar** to shoot rockets.
-* Or click with the **mouse** to fire.
+* Or click with the ** space key** to fire.
 * Try to hit "Wafu" and score as many points as possible.
 
 ## Features
