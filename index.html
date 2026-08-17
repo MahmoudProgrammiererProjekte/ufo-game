@@ -21,7 +21,11 @@
     <div id="pubg-fire-btn">FEUER</div>
   </div>
 
+  <!-- مكتبة بيكسي للرسوميات -->
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.x/dist/pixi.min.js"></script>
+  <!-- مكتبة هاولر المتطورة للصوتيات السريعة بدون لاق -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+  
   <script>
     document.addEventListener('touchstart', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
     let lastTouchEnd = 0;
@@ -39,7 +43,13 @@
 
     const ASSETS = { rocket: "rocket.png", bullet: "bullet.png", ufo1: "ufo1.png", ufo2: "ufo2.png" };
 
-    // تجهيز صورة الانفجار مرة واحدة فقط لتخفيف العبء على الهاتف
+    // تحميل الأصوات في الذاكرة العشوائية لتعمل بلمح البصر دون أي ثقل
+    const sounds = {
+        shoot: new Howl({ src: ['shoot.mp3'], volume: 0.5 }),
+        explosion: new Howl({ src: ['explosion.mp3'], volume: 0.6 }),
+        hit: new Howl({ src: ['hit.mp3'], volume: 0.6 })
+    };
+
     const expGraph = new PIXI.Graphics();
     expGraph.beginFill(0xffaa00).drawCircle(0, 0, 22).endFill();
     const explosionTexture = app.renderer.generateTexture(expGraph);
@@ -86,6 +96,7 @@
         const b = PIXI.Sprite.from(ASSETS.bullet);
         b.anchor.set(0.5); b.x = rocket.x; b.y = rocket.y - 35; b.scale.set(getScale(0.06));
         bullets.push(b); app.stage.addChild(b);
+        sounds.shoot.play(); // تشغيل صوت الطلقة عبر المكتبة السريعة
     }
 
     function shootUFOBullet(ufoX, ufoY) {
@@ -95,13 +106,13 @@
         app.stage.addChild(b); ufoBullets.push(b);
     }
 
-    // عرض الانفجار المجهز مسبقاً بطريقة سريعة جداً
     function explodeAt(x, y) {
         const s = new PIXI.Sprite(explosionTexture);
         s.anchor.set(0.5); s.x = x; s.y = y;
         if (isMobileScreen) s.scale.set(0.8);
         app.stage.addChild(s);
         explosions.push({ sprite: s, life: 6 });
+        sounds.explosion.play(); // تشغيل صوت الانفجار بسرعة
     }
 
     function spawnUFO() {
@@ -155,6 +166,7 @@
     }
 
     function startGame() {
+        Howler.ctx.resume(); // تنشيط الصوت عند التفاعل لتوافقه مع متصفحات الهواتف
         gameRunning = true; currentEnterAction = null;
         createRocket();
         levelStartTime = performance.now();
