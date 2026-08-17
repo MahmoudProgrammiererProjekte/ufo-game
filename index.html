@@ -39,7 +39,15 @@
 
     const ASSETS = { rocket: "rocket.png", bullet: "bullet.png", ufo1: "ufo1.png", ufo2: "ufo2.png", explosionSound: "explosion.mp3", hitSound: "hit.mp3", shootSound: "shoot.mp3" };
     const audio = { explosion: new Audio(ASSETS.explosionSound), hit: new Audio(ASSETS.hitSound), shoot: new Audio(ASSETS.shootSound) };
-    function playSound(s) { try { s.currentTime = 0; s.play().catch(()=>{}); } catch(e){} }
+    
+    // تشغيل الصوت الخفيف دون تجميد الشاشة
+    function playSound(s) { 
+        try { 
+            const snd = s.cloneNode(); 
+            snd.volume = 0.6;
+            snd.play().catch(()=>{}); 
+        } catch(e){} 
+    }
 
     let rocket = null, bullets = [], ufos = [], ufoBullets = [], explosions = [];
     let keys = {}, gameRunning = false, ufoTimer = 0, score = 0, levelIndex = 0, levelStartTime = 0, lastSpaceShoot = 0, currentEnterAction = null;
@@ -93,12 +101,12 @@
         app.stage.addChild(b); ufoBullets.push(b);
     }
 
+    // رسم الانفجار بشكل سريع وخفيف جداً لعدم تبطئة الشاشة
     function explodeAt(x, y) {
         const g = new PIXI.Graphics();
-        g.beginFill(0xff3333).drawCircle(0, 0, isMobileScreen ? 25 : 35).endFill();
-        g.beginFill(0xffaa00).drawCircle(0, 0, isMobileScreen ? 15 : 22).endFill();
+        g.beginFill(0xffaa00).drawCircle(0, 0, isMobileScreen ? 20 : 28).endFill();
         g.x = x; g.y = y; app.stage.addChild(g);
-        explosions.push({ sprite: g, life: 12 });
+        explosions.push({ sprite: g, life: 8 });
         playSound(audio.explosion);
     }
 
@@ -160,7 +168,7 @@
         ui.levelText.text = `Level: ${levelIndex+1} (Ziel: ${LEVELS[levelIndex].target})`;
     }
 
-    // === التحكم بأزرار الكيبورد (Enter للبدء و Space للإطلاق) ===
+    // التحكم بزر الإنتر وبدء اللعب وإطلاق المسطرة
     document.addEventListener("keydown", e => {
         if (["Space", "Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
         keys[e.code] = true;
@@ -181,12 +189,11 @@
     app.stage.addChild(startButton);
     currentEnterAction = () => { if (startButton.parent) app.stage.removeChild(startButton); startGame(); };
 
-    // === الحلقة الرئيسية للعبة ===
+    // الحلقة الرئيسية السريعة
     app.ticker.add(() => {
         if (!gameRunning || !rocket) return;
         const now = performance.now();
 
-        // إطلاق النار بالمسطرة (Space)
         if (keys["Space"] && now - lastSpaceShoot > 180) {
             shootBullet();
             lastSpaceShoot = now;
@@ -223,17 +230,20 @@
 
             let ufoHit = false;
             for (let j = bullets.length - 1; j >= 0; j--) {
-                if (isCollidingFast(bullets[j], u, 30)) {
+                const b = bullets[j];
+                if (isCollidingFast(b, u, 30)) {
                     explodeAt(u.x, u.y);
-                    destroySprite(u); destroySprite(bullets[j]);
-                    ufos.splice(i, 1); bullets.splice(j, 1);
-                    score++; ui.scoreText.text = `Punkte: ${score}`;
+                    destroySprite(u); 
+                    destroySprite(b);
+                    ufos.splice(i, 1); 
+                    bullets.splice(j, 1);
+                    score++; 
+                    ui.scoreText.text = `Punkte: ${score}`;
                     ufoHit = true;
                     break;
                 }
             }
 
-            // تجنب حساب تصادم الـ UFO مع الصاروخ إذا جرى تدميره برصاصة
             if (ufoHit) continue;
 
             if (rocket && isCollidingFast(u, rocket, 35)) {
@@ -243,7 +253,7 @@
 
         for (let i = explosions.length - 1; i >= 0; i--) {
             const e = explosions[i];
-            e.sprite.scale.x += 0.08; e.sprite.scale.y += 0.08; e.sprite.alpha -= 0.08; e.life--;
+            e.sprite.scale.x += 0.1; e.sprite.scale.y += 0.1; e.sprite.alpha -= 0.1; e.life--;
             if (e.life <= 0 || e.sprite.alpha <= 0) { destroySprite(e.sprite); explosions.splice(i, 1); }
         }
 
@@ -257,7 +267,7 @@
         if (score >= level.target || remaining <= 0) { endLevel(score >= level.target); }
     });
 
-    // === إعدادات التاتش والـ Joystick للموبايل ===
+    // عناصر التحكم باللمس المخصصة للموبايل
     (function setupTouch() {
       const joyContainer = document.getElementById('joystick-container'), joyStick = document.getElementById('joystick-stick'), fireBtn = document.getElementById('pubg-fire-btn');
       let isJoyActive = false, joyTouchId = null, fireInterval = null;
